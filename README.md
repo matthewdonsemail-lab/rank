@@ -1,5 +1,7 @@
 # rank
 
+![rank](./banner.png)
+
 > High-throughput, ultra-low latency AI ranking & reranking engine built for Nebius AI infrastructure.
 
 ---
