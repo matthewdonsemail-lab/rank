@@ -1,0 +1,24 @@
+{
+  "name": "rank",
+  "version": "0.1.0",
+  "description": "High-throughput, ultra-low latency AI ranking & reranking engine built for Nebius AI infrastructure",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "nebius",
+    "ai",
+    "reranker",
+    "ranking",
+    "search",
+    "rag",
+    "embeddings",
+    "cross-encoder"
+  ],
+  "author": "matthewdonsemail-lab",
+  "license": "MIT"
+}
