@@ -9,9 +9,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T04:00:30Z
+- **Last updated:** 2026-09-25T04:08:00Z
 
 ## Log
+
+### 2026-09-25 - naming conventions and lib/{library}/{domainname} architecture
+Researched TypeScript domain-driven design, module boundaries, and barrel re-export patterns using parallel-web-search. Created the authoritative specification `docs/naming-conventions.md` defining the normalized `lib/{library}/{domainname}/helpers/` architecture, strict kebab-case naming rules, unidirectional helper dependencies, and re-export patterns. Scaffolded starter modules in `lib/nebius/rerank`, `lib/typesafe/evaluator`, and `lib/convex/telemetry` implementing this standard. Implemented automated verification script `scripts/check-naming-conventions.mjs` and wired it into `lefthook.yml` pre-push gating.
 
 ### 2026-09-25 - fumadocs and openapi documentation pull
 Identified documentation framework used in `apps/docs` (port 3001) as Fumadocs (`fumadocs-openapi`, `fumadocs-ui`, `fumadocs-core`). Fetched complete 166-page Fumadocs documentation suite and full LLM reference into `docs/fumadocs/` and added `docs/fumadocs/` to `.gitignore`.

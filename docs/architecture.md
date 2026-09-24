@@ -64,3 +64,11 @@ where $k$ is a smoothing constant (default: 60), $w_m$ is the weight of model $m
 ### 5. Persistent State & Convex Ledger
 - Every scoring operation records an asynchronous receipt in Convex containing token usage, model identifiers, latency breakdown, and customer metadata tags.
 - Provides real-time reactive observability into latency and NDCG metrics.
+
+### 6. Module Architecture & Namespacing
+Code across Rank is organized into normalized bounded contexts under `lib/{library}/{domainname}/helpers/`:
+- **Libraries (`{library}`):** Provider or subsystem layer (`nebius`, `typesafe`, `convex`, `hono`, `treg`, `agentmail`, `fumadocs`, `core`).
+- **Domains (`{domainname}`):** Normalized lowercase kebab-case capability bounded contexts (`rerank`, `inference`, `evaluator`, `telemetry`, `registry`, `dispatcher`, `routing`).
+- **Helpers (`helpers/`):** Pure internal helper routines re-exported cleanly via `helpers/index.ts` and parent `index.ts`.
+- Complete guidelines and anti-patterns: **[Naming & Architecture Conventions](naming-conventions.md)**.
+

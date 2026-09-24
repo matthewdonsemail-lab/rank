@@ -47,6 +47,7 @@ The documentation is modularized into domain-separated references:
 - ⚡ **[Features Reference](docs/features.md):** Deep dive into cross-encoder reranking, multi-signal fusion, confidence gating, and token optimization.
 - 📡 **[API & MCP Reference](docs/api-and-mcp.md):** Complete specifications for `/v1/rerank`, `/v1/evaluate`, and the Model Context Protocol (MCP) server for Claude/Cursor.
 - 🛠 **[Self-Hosting Guide](docs/self-hosting.md):** Environment setup, Nebius AI Studio configuration, local development, and Convex deployment.
+- 📐 **[Naming & Architecture Conventions](docs/naming-conventions.md):** Specification for `lib/{library}/{domainname}/helpers` module boundaries, barrel re-exports, and domain taxonomy.
 - 🤝 **[Contributing Guidelines](docs/contributing.md):** Code style, commit conventions, and pull request workflows.
 
 ---
