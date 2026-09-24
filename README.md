@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="banner.png" alt="Rank by ListeningKit — Ultra-Low Latency AI Reranking & Model Routing Engine" width="100%" />
+  <img src="banner.png" alt="Rank by ListeningKit — Real-Time Social Lead Ranking & Brand Intent Engine" width="100%" />
 </p>
 
 # Rank by ListeningKit
@@ -12,10 +12,11 @@
   <a href="https://convex.dev"><img src="https://img.shields.io/badge/Backend-Convex-orange.svg?style=flat-square" alt="Convex Backend" /></a>
 </p>
 
-> **An ultra-low latency AI ranking, semantic reranking, and model decision routing engine.**  
-> Built for **Nebius AI Studio** high-throughput GPU inference and **TypeSafe AI (Jev / System One)** calibrated decision evaluation on **Convex Cloud**. Elevate RAG retrieval accuracy, benchmark open-weights models, and route agent decisions with sub-millisecond hot-path caching.
+> **The Real-Time Social Lead Ranking, Intent Scoring, and Brand Outreach Engine for ListeningKit.**  
+> Powered by **Nebius AI Studio** high-throughput GPU inference, **Convex Cloud** reactive persistence, and **TypeSafe AI (Jev / System One)** calibrated intent evaluation. Ingest social streams across Reddit, X (Twitter), and Facebook, evaluate candidate posts against your business's grounded **Brand Profile**, and autonomously route high-intent leads to AI agents.
 
 > **Live Deployment:** [https://rank.listeningkit.com](https://rank.listeningkit.com)  
+> **Brand Engine Docs:** [docs/brand/](docs/brand/)  
 > **Architecture & Diagrams:** [docs/diagrams/](docs/diagrams/)  
 > **API & MCP Reference:** [docs/api-and-mcp.md](docs/api-and-mcp.md)  
 > **Features Guide:** [docs/features.md](docs/features.md)  
@@ -25,40 +26,55 @@
 
 ## What is Rank by ListeningKit?
 
-In modern AI architectures—whether semantic search, RAG pipelines, social firehoses, or agentic routing—initial retrieval is only half the battle. Vector databases and keyword lookups surface plausible candidates, but they lack fine-grained nuance.
+ListeningKit monitors social media platforms (Reddit communities, X/Twitter feeds, Facebook Groups) for whole-word keyword occurrences to identify potential sales opportunities and brand mentions. However, raw keyword matching creates massive volumes of noise: casual chatter, sarcastic jokes, unrelated product complaints, and geographic mismatches. Over 90% of raw keyword alerts are not actionable leads.
 
-**Rank by ListeningKit** bridges high-speed retrieval and precision execution. By orchestrating **Nebius-hosted cross-encoders** (`bge-reranker-v2-m3`), **TypeSafe System One decision primitives**, and **Convex real-time telemetry**, Rank delivers calibrated, ranked candidate lists with verifiable confidence scores in milliseconds.
+**Rank by ListeningKit** is the intelligence layer that sits between raw social ingestion and autonomous action. It evaluates every incoming candidate post against a structured **Brand Profile** (`BrandEntity`), runs precision intent scoring via **Nebius AI Studio GPU cross-encoders**, and classifies high-intent sales opportunities with verifiable confidence scores in milliseconds.
 
 ```mermaid
-flowchart LR
-  A["1. Ingest Candidates<br/>(BM25, Vectors, Prompts)"] --> B["2. Fast Cache Check<br/>(Sub-ms LRU)"]
-  B --> C["3. Precision Scoring<br/>(Nebius & TypeSafe)"]
-  C --> D["4. Reciprocal Rank Fusion<br/>(Top-K Output)"]
+flowchart TD
+  subgraph Ingestion["1. Social Ingestion (ListeningKit)"]
+    RD["Reddit Communities"]
+    XT["X / Twitter Mentions"]
+    FB["Facebook Groups"]
+  end
+
+  subgraph Grounding["2. Brand Ground Truth (lib/brand)"]
+    BRAND["BrandEntity<br/>Identity · Offerings · Voice · Location · Memory"]
+    SOURCES["Indexed Sources<br/>Website Pages & Excerpts"]
+  end
+
+  subgraph Engine["3. Rank Engine (Nebius AI Studio & Convex)"]
+    CAND["Raw Candidate Posts"]
+    RERANK["Nebius Cross-Encoder & Intent Scoring<br/>(BAAI/bge-reranker-v2-m3 · Llama-3.3)"]
+    TOP["Ranked High-Intent Leads<br/>(Score 0-100 + Intent Tag + Rationale)"]
+  end
+
+  subgraph Action["4. Autonomous Outreach & Intelligence"]
+    AGENT["Convex Agent (@convex-dev/agent)<br/>Brand-Voiced Reply Drafting"]
+    MAIL["AgentMail (@agentmail/convex)<br/>Triage & Digest Alerts"]
+    TREG["Treg Tools (@listeningkit/treg)<br/>SEO & Competitor Ranking"]
+  end
+
+  RD & XT & FB --> CAND
+  CAND --> RERANK
+  BRAND & SOURCES --> RERANK
+  RERANK --> TOP
+  TOP --> AGENT
+  TOP --> MAIL
+  BRAND --> TREG
 ```
-
----
-
-## Documentation & Architecture
-
-The documentation is modularized into domain-separated references:
-
-- **[System Architecture](docs/architecture.md):** Detailed technical design, request lifecycles, and component interactions.
-- **[Architecture Diagrams](docs/diagrams/):** Standalone Mermaid `.mmd` diagrams covering system topology, the two-stage ranking pipeline, data model ERDs, and API authentication sequences.
-- **[Features Reference](docs/features.md):** Deep dive into cross-encoder reranking, multi-signal fusion, confidence gating, and token optimization.
-- **[API & MCP Reference](docs/api-and-mcp.md):** Complete specifications for `/v1/rerank`, `/v1/evaluate`, and the Model Context Protocol (MCP) server for Claude/Cursor.
-- **[Self-Hosting Guide](docs/self-hosting.md):** Environment setup, Nebius AI Studio configuration, local development, and Convex deployment.
-- **[Naming & Architecture Conventions](docs/naming-conventions.md):** Specification for `lib/{library}/{domainname}/helpers` module boundaries, barrel re-exports, and domain taxonomy.
-- **[Contributing Guidelines](docs/contributing.md):** Code style, commit conventions, and pull request workflows.
 
 ---
 
 ## Key Capabilities
 
-- **Cross-Encoder Semantic Reranking:** Precision scoring over retrieved candidate passages, documents, or social posts via Nebius-hosted models (`BAAI/bge-reranker-v2-m3`).
-- **Calibrated System One Evaluation:** Evaluates typed questions (Choice, Score, Noul) with confidence distributions via TypeSafe's Jev model.
-- **Reciprocal Rank Fusion (RRF):** Blends BM25, dense embeddings, and cross-encoder logits into a unified rank list.
-- **Sub-Millisecond Hot-Path Caching:** In-memory LRU caching eliminates redundant model calls for frequent queries.
-- **Developer-First SDK & MCP:** Lightweight TypeScript/Node client and standard MCP server endpoints.
+- **Cross-Encoder Social Lead Reranking:** Precision scoring over incoming social posts via Nebius-hosted models (`BAAI/bge-reranker-v2-m3`). Scores direct contextual cross-attention between brand offerings and social queries.
+- **Brand Ground Truth System (`lib/brand/`):** Strict, type-safe business profile containing offerings, target persona, geographic boundaries (`location`), voice dials, and operational memory boundaries.
+- **Calibrated Intent Gating:** Evaluates buying intent (Urgent Need, Product Evaluation, Casual Chat, Competitor Complaint) with confidence distributions via TypeSafe System One (Jev).
+- **Competitor & Keyword Intelligence (`@listeningkit/treg`):** Deep keyword ranking, domain competitor discovery, and Google search dorking strategies using SpyFu, SE Ranking, and Brave Search.
+- **Autonomous Outreach Pipeline (`@convex-dev/agent`):** Automatically drafts platform-native, brand-aligned responses grounded in indexed website pages (`BrandPage`) with verified citations.
+- **Reactive Alert Dispatch (`@agentmail/convex`):** Sends prioritized email notifications and summaries when high-score leads cross intent thresholds.
+- **Sub-Millisecond Hot-Path Caching:** In-memory LRU caching eliminates redundant model calls for duplicate social mentions and trending search queries.
 
 ---
 
@@ -76,30 +92,64 @@ cp .env.example .env.local
 NEBIUS_API_KEY=your_nebius_api_key_here
 NEBIUS_BASE_URL=https://api.studio.nebius.ai/v1
 DEFAULT_RANK_MODEL=BAAI/bge-reranker-v2-m3
+CONVEX_URL=https://your-convex-deployment.convex.cloud
 PORT=3000
 ```
 
-### 2. Basic Usage
+### 2. Basic Social Lead Ranking
 
 ```typescript
 import { RankClient } from "./src";
+import { brandClient } from "./lib/brand";
 
 const ranker = new RankClient({
   apiKey: process.env.NEBIUS_API_KEY,
 });
 
-const results = await ranker.rank({
-  query: "High performance inference on GPU clusters",
+// 1. Fetch grounded brand profile (offerings, location, voice rules)
+const brand = await brandClient.getBrand();
+
+// 2. Rank incoming social candidates against brand offerings
+const results = await ranker.rerank({
+  query: `Looking for commercial heating repairs and boiler maintenance: ${brand.offerings.map((o) => o.title).join(", ")}`,
   candidates: [
-    "Nebius provides specialized NVIDIA H100/H200 infrastructure with ultra-low latency.",
-    "Baking sourdough bread requires precise flour-to-water ratios.",
-    "Vector search algorithms like HNSW enable fast nearest neighbor searches.",
+    {
+      id: "post_reddit_01",
+      text: "Boiler stopped working at our commercial kitchen in Galway this morning. Need urgent commercial repair technician.",
+    },
+    {
+      id: "post_x_02",
+      text: "Just moved to Dublin, anyone know good coffee roasters nearby?",
+    },
+    {
+      id: "post_fb_03",
+      text: "Annual boiler safety inspection due next month for our apartment block in County Galway. Any recommendations?",
+    },
   ],
   topK: 2,
 });
 
-console.log(results);
+console.log("Ranked Leads:", results);
 ```
+
+---
+
+## Subsystem Architecture & Documentation
+
+The codebase is organized into normalized bounded contexts following the `lib/{library}/{domainname}/helpers/` convention:
+
+- **[System Architecture](docs/architecture.md):** Detailed technical design, request lifecycles, and component interactions.
+- **[Brand System Guide](docs/brand/README.md):** Brand profile structure, deterministic seed data, voice compiler, and website indexing.
+- **[Brand Voice Specification](docs/brand/voice.md):** Tone dials, perspective rules, and forbidden phrases.
+- **[Social Channel Strategies](docs/brand/channels.md):** Reddit, X (Twitter), Facebook, and LinkedIn outreach guidelines.
+- **[Agent Context & Synthesis](docs/brand/agent-context.md):** Context building, citation ground truth, and prompt injection defenses.
+- **[Website Indexing & Scraping](docs/brand/website-indexing.md):** Firecrawl ingestion pipeline, markdown normalization, and excerpt chunking.
+- **[Architecture Diagrams](docs/diagrams/):** Standalone Mermaid `.mmd` diagrams covering system topology, lead ranking pipeline, brand feedback loops, and data models.
+- **[Features Reference](docs/features.md):** Deep dive into cross-encoder reranking, multi-signal fusion, confidence gating, and token optimization.
+- **[API & MCP Reference](docs/api-and-mcp.md):** Complete specifications for `/v1/rerank`, `/v1/evaluate`, and the Model Context Protocol (MCP) server for Claude Code and Cursor.
+- **[Self-Hosting Guide](docs/self-hosting.md):** Environment setup, Nebius AI Studio configuration, local development, and Convex deployment.
+- **[Naming & Architecture Conventions](docs/naming-conventions.md):** Specification for module boundaries, barrel re-exports, and domain taxonomy.
+- **[Contributing Guidelines](docs/contributing.md):** Code style, commit conventions, and pull request workflows.
 
 ---
 

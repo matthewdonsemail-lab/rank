@@ -2,16 +2,19 @@
 
 - **Project:** Rank by ListeningKit
 - **Event:** Nebius AI Studio Hackathon
-- **What it does:** Ultra-low latency AI ranking, semantic reranking, and model decision routing engine built for Nebius AI Studio and TypeSafe AI on Convex.
+- **What it does:** Real-time social lead ranking, intent scoring, and brand outreach engine for ListeningKit built for Nebius AI Studio and TypeSafe AI on Convex.
 - **Live app:** https://rank.listeningkit.com
 - **Repo:** https://github.com/matthewdonsemail-lab/rank
 - **Backend:** Convex Cloud
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T05:14:00Z
+- **Last updated:** 2026-09-25T05:20:00Z
 
 ## Log
+
+### 2026-09-25 - project identity alignment, readme overhaul, and social lead intent reframing
+Diagnosed and corrected the project identity misalignment in `README.md` and related docs. Replaced generic, abstract vector-search and sourdough-bread reranker framing with the true identity of Rank by ListeningKit: the real-time AI intent scoring, social lead ranking, and brand outreach engine for the ListeningKit social listening platform. Articulated the end-to-end 4-step pipeline: social firehose ingestion (Reddit, X, Facebook) -> brand grounding (`lib/brand/` offerings, location, voice, and memory boundaries) -> Nebius AI Studio GPU intent reranking (`BAAI/bge-reranker-v2-m3`, Llama-3.3, DeepSeek) -> autonomous execution (`@convex-dev/agent`, `@agentmail/convex`, `@listeningkit/treg`). Updated `README.md`, `docs/architecture.md`, and `docs/api-and-mcp.md` with real social lead payloads, verified all 5 pre-push checks, and maintained strict zero-emoji compliance.
 
 ### 2026-09-25 - brand domain integration, exact shape replication, convex backend, and mock endpoints
 Integrated the complete brand entity shape and business logic from `listeningkit-hackathon` into `lib/brand/` with nested `lib/brand/helpers/` (`types.ts`, `prompt.ts`, `sources.ts`, `query.ts`, `extractor.ts`, `client.ts`, `index.ts`). Updated `scripts/check-naming-conventions.mjs` to support standalone domain packages having an entrypoint `index.ts` directly under `lib/`. Integrated Convex backend support including `brands` table definition in `convex/schema.ts`, Firecrawl website scraping and sitemap link mapping in `convex/lib/firecrawl.ts`, authenticated owner checks in `convex/lib/server.ts`, and query `mine`, actions `extractFromWebsite` & `mapWebsite`, and internal mutations `claim` & `store` in `convex/brand.ts`. Created modular mock route fixtures in `mock/data/brand.ts`, `mock/data/brand-sources.ts`, and `mock/data/brand-intelligence.ts` with doc backing verification. Mounted seven brand endpoints in `mock/server.ts` (`GET/PUT/DELETE /api/brand`, `POST /api/brand/intelligence`, `GET/POST/DELETE /api/brand/sources`), wired brand methods into `mock/store.ts` and `mock/client.ts`, and updated `mock/validator.ts` to unwrap brand and sources containers. Built the complete documentation suite under `docs/brand/` (`README.md`, `voice.md`, `channels.md`, `agent-context.md`, `website-indexing.md`) and added Mermaid diagrams in `docs/diagrams/brand-context-pipeline.mmd` and `brand-feedback-loop.mmd`. Verified 100% pass across all mock routes, doc backing verification, and all five pre-push quality gates with zero emojis.

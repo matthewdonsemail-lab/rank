@@ -25,17 +25,17 @@ Authorization: Bearer sk-rank-your_api_key_here
 
 ### 1. `POST /v1/rerank`
 
-Score and sort a list of candidate documents or strings against a query.
+Score and sort a list of candidate social posts or text documents against a brand query or intent criteria.
 
 #### Request Body
 
 ```json
 {
-  "query": "GPU inference latency benchmarks on NVIDIA H100",
+  "query": "Emergency commercial boiler repair and heating servicing in Galway",
   "candidates": [
-    { "id": "doc_1", "text": "Nebius provides bare-metal and managed H100 clusters with high throughput." },
-    { "id": "doc_2", "text": "Sourdough bread fermentation requires wild yeast culture." },
-    { "id": "doc_3", "text": "Benchmarking LLM inference across vLLM and TensorRT-LLM." }
+    { "id": "post_reddit_01", "text": "Boiler stopped working at our commercial kitchen in Galway this morning. Need urgent commercial repair technician." },
+    { "id": "post_x_02", "text": "Anyone know good coffee roasters near Galway city centre?" },
+    { "id": "post_fb_03", "text": "Annual boiler safety inspection due next month for our apartment block in County Galway. Looking for recommendations." }
   ],
   "top_k": 2,
   "model": "BAAI/bge-reranker-v2-m3"
@@ -49,15 +49,15 @@ Score and sort a list of candidate documents or strings against a query.
   "results": [
     {
       "index": 0,
-      "id": "doc_1",
+      "id": "post_reddit_01",
       "score": 0.9842,
-      "text": "Nebius provides bare-metal and managed H100 clusters with high throughput."
+      "text": "Boiler stopped working at our commercial kitchen in Galway this morning. Need urgent commercial repair technician."
     },
     {
       "index": 2,
-      "id": "doc_3",
+      "id": "post_fb_03",
       "score": 0.8915,
-      "text": "Benchmarking LLM inference across vLLM and TensorRT-LLM."
+      "text": "Annual boiler safety inspection due next month for our apartment block in County Galway. Looking for recommendations."
     }
   ],
   "meta": {
