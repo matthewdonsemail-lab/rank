@@ -4,7 +4,7 @@
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Node.js**: v20+ or v24+
 - **pnpm**: v9+ or v10+
@@ -14,7 +14,7 @@
 
 ---
 
-## 🛠 Local Setup
+## Local Setup
 
 ### 1. Clone & Install
 
@@ -62,7 +62,7 @@ The service will start on `http://localhost:3000`.
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ```bash
 pnpm run test
@@ -70,7 +70,7 @@ pnpm run test
 
 ---
 
-## 🚢 Production Deployment
+## Production Deployment
 
 The production deployment runs at **[rank.listeningkit.com](https://rank.listeningkit.com)**.
 

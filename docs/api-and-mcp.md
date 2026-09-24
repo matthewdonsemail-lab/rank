@@ -4,14 +4,14 @@
 
 ---
 
-## 🌐 Base URLs
+## Base URLs
 
 - **Production API:** `https://rank.listeningkit.com/api`
 - **Local Development:** `http://localhost:3000/api`
 
 ---
 
-## 🔑 Authentication
+## Authentication
 
 Include your API key as a Bearer token in the `Authorization` header:
 
@@ -21,7 +21,7 @@ Authorization: Bearer sk-rank-your_api_key_here
 
 ---
 
-## 📡 REST Endpoints
+## REST Endpoints
 
 ### 1. `POST /v1/rerank`
 
@@ -101,7 +101,7 @@ Evaluate a candidate or decision using TypeSafe System One (Jev).
 
 ---
 
-## 🤖 Model Context Protocol (MCP) Server
+## Model Context Protocol (MCP) Server
 
 Connect your AI coding assistants (Claude Code, Cursor, Codex) directly to Rank:
 

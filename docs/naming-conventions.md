@@ -222,19 +222,19 @@ The following table documents the approved `{library}` and `{domainname}` namesp
 
 To ensure repository consistency, the following patterns are strictly prohibited and flagged by our gating hooks:
 
-1. ❌ **Mixed-Case or CamelCase Directories:**
+1. [PROHIBITED] **Mixed-Case or CamelCase Directories:**
    - Prohibited: `lib/Nebius/ReRank/`, `lib/typesafe/decisionEvaluator/`
    - Allowed: `lib/nebius/rerank/`, `lib/typesafe/evaluator/`
-2. ❌ **Omitting the `helpers/` Barrel:**
+2. [PROHIBITED] **Omitting the `helpers/` Barrel:**
    - Prohibited: Creating helper files under `helpers/` without an `index.ts` re-export.
    - Allowed: Always provide `helpers/index.ts` with explicit named re-exports.
-3. ❌ **Circular Imports to Parent Index:**
+3. [PROHIBITED] **Circular Imports to Parent Index:**
    - Prohibited: `import { NebiusRerankClient } from '../index.js'` from inside `helpers/`.
    - Allowed: Helpers only import from `../types.js` or peer helpers `./*.js`.
-4. ❌ **Wildcard Mega-Barrels:**
+4. [PROHIBITED] **Wildcard Mega-Barrels:**
    - Prohibited: `export * from './helpers/score-normalizer'` in parent barrels without named intent.
    - Allowed: Explicit named exports: `export { normalizeScores } from './helpers/index.js'`.
-5. ❌ **Deep Relative Traversal from Application Code:**
+5. [PROHIBITED] **Deep Relative Traversal from Application Code:**
    - Prohibited: `import { normalizeScores } from '../../../../lib/nebius/rerank/helpers/score-normalizer.js'`
    - Allowed: `import { normalizeScores } from '@/lib/nebius/rerank'` or `@/lib/nebius/rerank/helpers`.
 

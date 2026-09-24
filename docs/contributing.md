@@ -4,7 +4,7 @@ We welcome contributions to **Rank by ListeningKit**! Please read this guide bef
 
 ---
 
-## 🛠 Development Workflow
+## Development Workflow
 
 1. **Fork and branch**:
    ```bash
@@ -27,7 +27,7 @@ We welcome contributions to **Rank by ListeningKit**! Please read this guide bef
 
 ---
 
-## 📐 Code Style & Conventions
+## Code Style & Conventions
 
 - Use TypeScript with strict type checking enabled.
 - Avoid loose `any` types; define explicit interfaces in `src/types/`.
@@ -36,6 +36,6 @@ We welcome contributions to **Rank by ListeningKit**! Please read this guide bef
 
 ---
 
-## 📄 License
+## License
 
 By contributing, you agree that your contributions will be licensed under the project's [MIT License](../LICENSE).

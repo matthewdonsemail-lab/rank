@@ -102,7 +102,7 @@ AgentMail is an email infrastructure API purpose-built for AI agents and automat
 
 ---
 
-## 📚 Complete References
+## Complete References
 
 - **OpenAPI Specification:** [\`openapi.json\`](./openapi.json) (470 KB complete REST API schema)
 - **Documentation Index:** [\`llms.txt\`](./llms.txt)
@@ -110,7 +110,7 @@ AgentMail is an email infrastructure API purpose-built for AI agents and automat
 
 ---
 
-## 🧭 Major Subsystems
+## Major Subsystems
 
 ### 1. Core Concepts & Inboxes
 - [Welcome](./welcome.md) — Starting point for building with AgentMail.

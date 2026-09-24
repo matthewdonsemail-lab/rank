@@ -105,7 +105,7 @@ Hono is an ultrafast, lightweight web framework built on Web Standards that runs
 
 ---
 
-## 📚 Complete References
+## Complete References
 
 - **Full Documentation (Single File):** [\`llms-full.txt\`](./llms-full.txt)
 - **Compact Summary:** [\`llms-small.txt\`](./llms-small.txt)
@@ -113,7 +113,7 @@ Hono is an ultrafast, lightweight web framework built on Web Standards that runs
 
 ---
 
-## 🧭 Major Subsystems
+## Major Subsystems
 
 ### 1. Core API
 - Context (\`c.req\`, \`c.res\`, \`c.json\`, \`c.text\`, \`c.html\`)

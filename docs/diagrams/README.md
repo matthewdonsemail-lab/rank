@@ -4,7 +4,7 @@ This directory contains domain-separated Mermaid diagrams documenting the **Rank
 
 ---
 
-## 📊 Table of Diagrams
+## Table of Diagrams
 
 | Domain | Diagram | Source File | Description |
 |---|---|---|---|

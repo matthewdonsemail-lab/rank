@@ -4,7 +4,7 @@
 
 ---
 
-## ⚡ Core Capabilities
+## Core Capabilities
 
 ### 1. Cross-Encoder Semantic Reranking
 - **Model Support:** `BAAI/bge-reranker-v2-m3`, `bge-reranker-large`, and custom fine-tuned checkpoints deployed on Nebius AI Studio.

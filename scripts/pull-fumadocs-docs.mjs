@@ -95,14 +95,14 @@ async function main() {
 
 ---
 
-## 📚 Complete References
+## Complete References
 
 - **Full Documentation (Single File):** [\`llms-full.txt\`](./llms-full.txt) (~698 KB complete reference)
 - **Upstream Index:** [\`llms.txt\`](./llms.txt)
 
 ---
 
-## 🧭 OpenAPI Documentation Subsystem (\`fumadocs-openapi\`)
+## OpenAPI Documentation Subsystem (\`fumadocs-openapi\`)
 
 - **OpenAPI Integration:** [\`integrations/openapi.md\`](./integrations/openapi.md) — Generating docs from OpenAPI / Swagger schemas.
 - **API Page Component:** [\`integrations/openapi/api-page.md\`](./integrations/openapi/api-page.md) — Rendering interactive API operation pages.
@@ -112,7 +112,7 @@ async function main() {
 
 ---
 
-## 🛠 Framework & UI Core
+## Framework & UI Core
 
 - [Quick Start](./index.md) — Setting up Fumadocs in Next.js App Router.
 - [Page Conventions](./page-conventions.md) — Page trees and file routing conventions.

@@ -23,7 +23,7 @@
 
 ---
 
-## ⚡ What is Rank by ListeningKit?
+## What is Rank by ListeningKit?
 
 In modern AI architectures—whether semantic search, RAG pipelines, social firehoses, or agentic routing—initial retrieval is only half the battle. Vector databases and keyword lookups surface plausible candidates, but they lack fine-grained nuance.
 
@@ -38,21 +38,21 @@ flowchart LR
 
 ---
 
-## 🧭 Documentation & Architecture
+## Documentation & Architecture
 
 The documentation is modularized into domain-separated references:
 
-- 🏛 **[System Architecture](docs/architecture.md):** Detailed technical design, request lifecycles, and component interactions.
-- 📊 **[Architecture Diagrams](docs/diagrams/):** Standalone Mermaid `.mmd` diagrams covering system topology, the two-stage ranking pipeline, data model ERDs, and API authentication sequences.
-- ⚡ **[Features Reference](docs/features.md):** Deep dive into cross-encoder reranking, multi-signal fusion, confidence gating, and token optimization.
-- 📡 **[API & MCP Reference](docs/api-and-mcp.md):** Complete specifications for `/v1/rerank`, `/v1/evaluate`, and the Model Context Protocol (MCP) server for Claude/Cursor.
-- 🛠 **[Self-Hosting Guide](docs/self-hosting.md):** Environment setup, Nebius AI Studio configuration, local development, and Convex deployment.
-- 📐 **[Naming & Architecture Conventions](docs/naming-conventions.md):** Specification for `lib/{library}/{domainname}/helpers` module boundaries, barrel re-exports, and domain taxonomy.
-- 🤝 **[Contributing Guidelines](docs/contributing.md):** Code style, commit conventions, and pull request workflows.
+- **[System Architecture](docs/architecture.md):** Detailed technical design, request lifecycles, and component interactions.
+- **[Architecture Diagrams](docs/diagrams/):** Standalone Mermaid `.mmd` diagrams covering system topology, the two-stage ranking pipeline, data model ERDs, and API authentication sequences.
+- **[Features Reference](docs/features.md):** Deep dive into cross-encoder reranking, multi-signal fusion, confidence gating, and token optimization.
+- **[API & MCP Reference](docs/api-and-mcp.md):** Complete specifications for `/v1/rerank`, `/v1/evaluate`, and the Model Context Protocol (MCP) server for Claude/Cursor.
+- **[Self-Hosting Guide](docs/self-hosting.md):** Environment setup, Nebius AI Studio configuration, local development, and Convex deployment.
+- **[Naming & Architecture Conventions](docs/naming-conventions.md):** Specification for `lib/{library}/{domainname}/helpers` module boundaries, barrel re-exports, and domain taxonomy.
+- **[Contributing Guidelines](docs/contributing.md):** Code style, commit conventions, and pull request workflows.
 
 ---
 
-## 🎯 Key Capabilities
+## Key Capabilities
 
 - **Cross-Encoder Semantic Reranking:** Precision scoring over retrieved candidate passages, documents, or social posts via Nebius-hosted models (`BAAI/bge-reranker-v2-m3`).
 - **Calibrated System One Evaluation:** Evaluates typed questions (Choice, Score, Noul) with confidence distributions via TypeSafe's Jev model.
@@ -62,7 +62,7 @@ The documentation is modularized into domain-separated references:
 
 ---
 
-## 🚀 Quickstart
+## Quickstart
 
 ### 1. Environment Setup
 
@@ -103,6 +103,6 @@ console.log(results);
 
 ---
 
-## 📄 License
+## License
 
-MIT © 2026 [Rank Contributors / ListeningKit](LICENSE)
+MIT (c) 2026 [Rank Contributors / ListeningKit](LICENSE)

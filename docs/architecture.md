@@ -4,7 +4,7 @@
 
 ---
 
-## 🏛 System Overview
+## System Overview
 
 **Rank by ListeningKit** is an ultra-low-latency AI ranking, semantic reranking, and model decision routing engine built for **Nebius AI Studio** and **TypeSafe AI (Jev / System One)** on **Convex Cloud**.
 
@@ -39,7 +39,7 @@ Client / Agent / Search Pipeline
 
 ---
 
-## 🧩 Core Subsystems
+## Core Subsystems
 
 ### 1. Ingestion & API Gateway
 - **HTTP Routing:** Type-safe Hono API routing requests for `/v1/rank`, `/v1/rerank`, and `/v1/evaluate`.
@@ -71,4 +71,3 @@ Code across Rank is organized into normalized bounded contexts under `lib/{libra
 - **Domains (`{domainname}`):** Normalized lowercase kebab-case capability bounded contexts (`rerank`, `inference`, `evaluator`, `telemetry`, `registry`, `dispatcher`, `routing`).
 - **Helpers (`helpers/`):** Pure internal helper routines re-exported cleanly via `helpers/index.ts` and parent `index.ts`.
 - Complete guidelines and anti-patterns: **[Naming & Architecture Conventions](naming-conventions.md)**.
-

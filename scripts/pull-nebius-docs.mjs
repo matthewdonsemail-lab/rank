@@ -88,14 +88,14 @@ Nebius AI Cloud is an AI infrastructure platform offering GPU compute clusters (
 
 ---
 
-## 📚 Complete References
+## Complete References
 
 - **Full Documentation (Single File):** [\`llms-full.txt\`](./llms-full.txt)
 - **Upstream Index:** [\`llms.txt\`](./llms.txt)
 
 ---
 
-## 🧭 Major Subsystems
+## Major Subsystems
 
 ### 1. Compute & GPU Infrastructure
 - Managed GPU clusters with InfiniBand interconnect

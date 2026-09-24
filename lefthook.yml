@@ -11,3 +11,5 @@ pre-push:
       run: node scripts/check-no-tracking.mjs
     - name: library and domain naming conventions
       run: node scripts/check-naming-conventions.mjs
+    - name: no emojis (brand rule)
+      run: node scripts/check-no-emojis.mjs
