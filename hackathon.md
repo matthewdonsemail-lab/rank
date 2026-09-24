@@ -9,9 +9,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T03:56:30Z
+- **Last updated:** 2026-09-25T04:00:30Z
 
 ## Log
+
+### 2026-09-25 - fumadocs and openapi documentation pull
+Identified documentation framework used in `apps/docs` (port 3001) as Fumadocs (`fumadocs-openapi`, `fumadocs-ui`, `fumadocs-core`). Fetched complete 166-page Fumadocs documentation suite and full LLM reference into `docs/fumadocs/` and added `docs/fumadocs/` to `.gitignore`.
 
 ### 2026-09-25 - hono documentation pull and router reference
 Fetched complete Hono documentation suite (87 guides, full/small llms reference, context, routing, middleware) into `docs/hono/` and added `docs/hono/` to `.gitignore`.
