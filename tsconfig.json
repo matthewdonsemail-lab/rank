@@ -13,12 +13,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "rewriteRelativeImportExtensions": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
       "@/lib/*": ["lib/*"]
     }
   },
-  "include": ["src/**/*", "lib/**/*"],
+  "include": ["src/**/*", "lib/**/*", "mock/**/*"],
   "exclude": ["node_modules", "dist", "docs"]
 }

@@ -9,9 +9,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T04:24:00Z
+- **Last updated:** 2026-09-25T04:40:00Z
 
 ## Log
+
+### 2026-09-25 - relational mock architecture and clerk documentation pull
+Designed and implemented a comprehensive, in-memory relational mock architecture under `mock/` mirroring the complete Convex backend schema (`workspaces`, `apiKeys`, `rankSessions`, `candidates`, `receipts`, `benchmarkRuns`), Convex Agent component (`agentThreads`, `agentMessages`), Convex AgentMail component (`mailInboxes`, `mailThreads`, `mailMessages`), and Clerk authentication identity (`users`, `organizations`). Built 16 modular route fixture files under `mock/data/` enforcing the "one piece of data per route" standard, an in-memory relational store with referential querying in `mock/store.ts`, a zero-dependency standalone Node HTTP server in `mock/server.ts` with CORS and dynamic cross-encoder scoring, and a drop-in Convex mock client bridge in `mock/client.ts`. Pulled the complete Clerk documentation suite (17 markdown files including full llms.txt index, backend verification, Convex integration, and Next.js quickstarts) into `docs/clerk/` with `.gitignore` coverage. Added automated validation script `scripts/verify-mock.mjs` and verified zero errors across all pre-push gates.
 
 ### 2026-09-25 - convex project initialization, component installation, and documentation
 Configured Convex project 'rank' (`convex.json`) and installed production components `@convex-dev/agent` and `@agentmail/convex`. Mounted both components in `convex/convex.config.ts`, created core database schema in `convex/schema.ts`, exposed the Svix webhook router in `convex/http.ts`, and built reactive email queries, mutations, and triage handlers in `convex/email.ts` and `convex/agent.ts`. Authored full component documentation suites under `docs/convex/components/agent/` and `docs/convex/components/agentmail/` with architecture specs, tools, and webhook guides. Scaffolded corresponding domain wrappers in `lib/convex/agent` and `lib/convex/agentmail` following normalized kebab-case conventions.
