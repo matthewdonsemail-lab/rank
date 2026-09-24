@@ -46,16 +46,19 @@ Client / Agent / Search Pipeline
 - **Authentication:** SHA-256 hashed API token authorization matching keys against the workspace registry in Convex.
 - **Rate Limiting & Safety:** Adaptive concurrency controls to respect downstream provider rate ceilings.
 
-### 2. The Two-Stage Lead Retrieval & Intent Paradigm
-1. **Stage 1: Social Candidate Retrieval**
-   - High-throughput social firehose streaming (Reddit, X, Facebook) matching whole-word listening rules produces batches of raw candidate mentions (20–100 posts per cycle).
-2. **Stage 2: Cross-Encoder Precision Reranking & Brand Grounding**
-   - The brand query (derived from `BrandEntity` offerings and service scope in `lib/brand/`) and candidate posts are scored jointly through cross-encoders (e.g. `BAAI/bge-reranker-v2-m3` on Nebius AI Studio) to compute true contextual cross-attention logits.
+### 2. The Two-Stage Backlink Prospect Retrieval & Ranking Paradigm
+1. **Stage 1: Live Web Prospect Discovery & Spam Filtering**
+   - Real-time search across the web for relevant articles, roundups, resource directories, and competitor backlink profiles (via `@listeningkit/treg` - SpyFu, SE Ranking, Brave Search).
+   - Automated quality heuristics eliminate private blog networks (PBNs), generic link directories, and zero-traffic farms before opportunities enter the candidate queue.
+2. **Stage 2: Cross-Encoder Precision Opportunity Reranking ("Rank")**
+   - Target page content and brand source articles (`BrandEntity` and `BrandPage` in `lib/brand/`) are scored jointly through cross-encoders (e.g. `BAAI/bge-reranker-v2-m3` on Nebius AI Studio) to compute true contextual cross-attention logits.
+   - Generates an editorial fit score (0–100), a plain-language fit rationale, and a suggested placement angle (e.g. data citation, missing roundup item, guest contribution).
 
-### 3. Brand Grounding & Autonomous Actions
-- **Brand Ground Truth (`lib/brand/`):** Strict business profile containing service offerings, geographic bounds (`location`), voice dials, and operational memory boundaries.
-- **Autonomous Reply Drafting (`@convex-dev/agent`):** High-ranking leads trigger the Convex Agent to compile deterministic system prompts (`buildBrandSystemPrompt`), retrieve citations from indexed site pages (`BrandPage`), and draft platform-tailored responses.
-- **Reactive Alert Dispatch (`@agentmail/convex`):** Inbound webhooks and high-priority lead notifications delivered directly to stakeholder inboxes.
+### 3. Content Grounding, Autonomous Outreach & First-Reply Handoff
+- **Brand Content Ground Truth (`lib/brand/`):** Indexes published articles, guides, and product offerings (`BrandPage`) to establish exactly why an external publication should cite your brand.
+- **Autonomous Pitch Drafting (`@convex-dev/agent`):** Drafts personalized, non-templated outreach pitches tailored to the specific target article and author angle, grounded in verified excerpts.
+- **Warmed Sending Pool & Follow-ups (`@agentmail/convex`):** Dispatches pitches through dedicated warmed sending accounts, running automated follow-ups until the prospect replies without risking primary domain reputation.
+- **First-Reply Handoff:** The moment an editor or site owner responds, automation immediately pauses and hands the conversation over to the founder's personal inbox.
 - **Competitor & Keyword Intelligence (`@listeningkit/treg`):** Ranks search visibility, competitor domains, and dorking queries via SpyFu, SE Ranking, and Brave Search.
 
 ### 4. TypeSafe AI (System One) Evaluator

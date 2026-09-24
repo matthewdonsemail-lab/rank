@@ -2,16 +2,19 @@
 
 - **Project:** Rank by ListeningKit
 - **Event:** Nebius AI Studio Hackathon
-- **What it does:** Real-time social lead ranking, intent scoring, and brand outreach engine for ListeningKit built for Nebius AI Studio and TypeSafe AI on Convex.
+- **What it does:** Autonomous AI link-building, backlink prospect ranking, and editorial outreach engine for ListeningKit built for Nebius AI Studio and TypeSafe AI on Convex.
 - **Live app:** https://rank.listeningkit.com
 - **Repo:** https://github.com/matthewdonsemail-lab/rank
 - **Backend:** Convex Cloud
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T05:20:00Z
+- **Last updated:** 2026-09-25T05:22:00Z
 
 ## Log
+
+### 2026-09-25 - realignment to ai link-building, backlink prospect ranking, and editorial outreach engine
+Aligned the Rank by ListeningKit engine to its true identity as an autonomous AI link-building, backlink prospect ranking, and editorial outreach engine. Completely removed incorrect social media marketing / lead triage framing across Reddit, X/Twitter, and Facebook. Articulated the core workflow: ingesting brand website assets and published articles (`BrandEntity` and `BrandPage` in `lib/brand/`), live web prospecting and PBN/link farm spam filtering (via `@listeningkit/treg`), cross-encoder opportunity ranking and fit rationale generation using Nebius AI Studio GPU infrastructure (`BAAI/bge-reranker-v2-m3`), and autonomous pitch drafting via `@convex-dev/agent` with warmed sending pool execution and first-reply handoffs via `@agentmail/convex`. Overhauled `README.md`, `docs/architecture.md`, `docs/features.md`, `docs/api-and-mcp.md`, and `docs/brand/channels.md`. Maintained strict zero-emoji compliance and verified all 5 pre-push quality gates.
 
 ### 2026-09-25 - project identity alignment, readme overhaul, and social lead intent reframing
 Diagnosed and corrected the project identity misalignment in `README.md` and related docs. Replaced generic, abstract vector-search and sourdough-bread reranker framing with the true identity of Rank by ListeningKit: the real-time AI intent scoring, social lead ranking, and brand outreach engine for the ListeningKit social listening platform. Articulated the end-to-end 4-step pipeline: social firehose ingestion (Reddit, X, Facebook) -> brand grounding (`lib/brand/` offerings, location, voice, and memory boundaries) -> Nebius AI Studio GPU intent reranking (`BAAI/bge-reranker-v2-m3`, Llama-3.3, DeepSeek) -> autonomous execution (`@convex-dev/agent`, `@agentmail/convex`, `@listeningkit/treg`). Updated `README.md`, `docs/architecture.md`, and `docs/api-and-mcp.md` with real social lead payloads, verified all 5 pre-push checks, and maintained strict zero-emoji compliance.

@@ -25,17 +25,26 @@ Authorization: Bearer sk-rank-your_api_key_here
 
 ### 1. `POST /v1/rerank`
 
-Score and sort a list of candidate social posts or text documents against a brand query or intent criteria.
+Score and rank candidate web pages, roundups, and articles against a brand content asset or citation query.
 
 #### Request Body
 
 ```json
 {
-  "query": "Emergency commercial boiler repair and heating servicing in Galway",
+  "query": "Guide to low-latency AI inference routing and GPU cross-encoders: benchmarks, memory optimization, and TTFT metrics",
   "candidates": [
-    { "id": "post_reddit_01", "text": "Boiler stopped working at our commercial kitchen in Galway this morning. Need urgent commercial repair technician." },
-    { "id": "post_x_02", "text": "Anyone know good coffee roasters near Galway city centre?" },
-    { "id": "post_fb_03", "text": "Annual boiler safety inspection due next month for our apartment block in County Galway. Looking for recommendations." }
+    {
+      "id": "prospect_01",
+      "text": "Engineering deep dive on optimizing LLM inference pipelines with cross-encoders and model decision routers."
+    },
+    {
+      "id": "prospect_02",
+      "text": "Weekend guide to the best artisanal bakeries and cafes in central Dublin."
+    },
+    {
+      "id": "prospect_03",
+      "text": "Curated list of AI developer tools, benchmarking frameworks, and high-performance inference servers."
+    }
   ],
   "top_k": 2,
   "model": "BAAI/bge-reranker-v2-m3"
@@ -49,15 +58,15 @@ Score and sort a list of candidate social posts or text documents against a bran
   "results": [
     {
       "index": 0,
-      "id": "post_reddit_01",
+      "id": "prospect_01",
       "score": 0.9842,
-      "text": "Boiler stopped working at our commercial kitchen in Galway this morning. Need urgent commercial repair technician."
+      "text": "Engineering deep dive on optimizing LLM inference pipelines with cross-encoders and model decision routers."
     },
     {
       "index": 2,
-      "id": "post_fb_03",
+      "id": "prospect_03",
       "score": 0.8915,
-      "text": "Annual boiler safety inspection due next month for our apartment block in County Galway. Looking for recommendations."
+      "text": "Curated list of AI developer tools, benchmarking frameworks, and high-performance inference servers."
     }
   ],
   "meta": {
@@ -73,16 +82,16 @@ Score and sort a list of candidate social posts or text documents against a bran
 
 ### 2. `POST /v1/evaluate`
 
-Evaluate a candidate or decision using TypeSafe System One (Jev).
+Evaluate backlink prospect suitability, PBN/spam indicators, or editorial angles using TypeSafe System One (Jev).
 
 #### Request Body
 
 ```json
 {
-  "state": "User reported their card was billed twice for annual subscription.",
+  "state": "Target site is a tech publication with 45k monthly organic visitors covering AI infrastructure. Article discusses open-weights rerankers.",
   "questions": {
-    "is_billing": { "type": "noul", "instructions": "Is this inquiry related to billing?" },
-    "urgency": { "type": "score", "instructions": "Rate urgency", "criteria": ["low", "medium", "high"] }
+    "is_real_publication": { "type": "noul", "instructions": "Is this a genuine publication rather than a PBN or link farm?" },
+    "fit_quality": { "type": "score", "instructions": "Rate editorial citation fit quality", "criteria": ["low", "medium", "high"] }
   }
 }
 ```
@@ -92,8 +101,8 @@ Evaluate a candidate or decision using TypeSafe System One (Jev).
 ```json
 {
   "answers": {
-    "is_billing": { "noul": 0.992, "confidence": 0.98 },
-    "urgency": { "score": "high", "confidence": 0.94 }
+    "is_real_publication": { "noul": 0.992, "confidence": 0.98 },
+    "fit_quality": { "score": "high", "confidence": 0.94 }
   },
   "request_id": "req_881fbc"
 }
@@ -103,7 +112,7 @@ Evaluate a candidate or decision using TypeSafe System One (Jev).
 
 ## Model Context Protocol (MCP) Server
 
-Connect your AI coding assistants (Claude Code, Cursor, Codex) directly to Rank:
+Connect your AI coding assistants (Claude Code, Cursor, Codex) directly to your live link-building pipeline:
 
 ### MCP Server Config (`claude_desktop_config.json`)
 
@@ -122,6 +131,7 @@ Connect your AI coding assistants (Claude Code, Cursor, Codex) directly to Rank:
 ```
 
 ### Available MCP Tools
-- `rank_candidates`: Rerank arbitrary texts or structured records against a search prompt.
-- `evaluate_decision`: Ask structured System One questions with calibrated confidence outputs.
-- `model_benchmark`: Compare latency and score quality across Nebius model endpoints.
+- `rank_backlink_prospects`: Rerank discovered web articles and resource pages against brand content assets.
+- `evaluate_prospect_fit`: Ask structured System One questions with calibrated confidence outputs regarding prospect quality and spam risk.
+- `get_opportunity_queue`: Retrieve the active daily backlink opportunities, fit rationales, and outreach drafts.
+- `get_pipeline_stats`: Query active campaigns, outreach volume, reply rates, and earned citations.

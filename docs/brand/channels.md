@@ -1,14 +1,14 @@
-# Channel Response Profiles
+# Channel Communication Profiles
 
-The `channels` dictionary maintains discrete communication configurations across social platforms: `facebook`, `x`, and `reddit`.
+The `channels` dictionary maintains discrete communication and outreach configurations across platform contexts (`facebook`, `x`, and `reddit`), governing tone style, author outreach snippets, triage steps, and response behavior.
 
 ## 1. Channel Profile Structure
 
 Each channel entry contains:
-- `style`: `'casual' | 'standard'`. Casual channels apply all-lowercase typography and fast chatting conventions.
-- `examples`: Human typing snippets for the channel (fragments, quick responses, no corporate boilerplate).
-- `triage`: Ordered prioritization steps (e.g. asking for DM, qualifying budget, booking inspection).
-- `autoreplies`: Enabled baseline messages triggered by keyword overlap against lead text.
+- `style`: `'casual' | 'standard'`. Casual styling applies relaxed lowercase typography and fast messaging conventions.
+- `examples`: Curated writing snippets for the communication context (fragments, direct responses, natural phrasing, no corporate boilerplate).
+- `triage`: Ordered prioritization steps (e.g. initiating direct outreach, qualifying resource fit, scheduling editorial review).
+- `autoreplies`: Baseline messages triggered by keyword overlap against inquiry text.
 
 ## 2. Autoreply Resolution
 
