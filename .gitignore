@@ -40,7 +40,9 @@ Thumbs.db
 
 # External Documentation (pulled locally via scripts, ignored from git)
 docs/typesafe/
-docs/convex/
+docs/convex/*
+!docs/convex/components/
+!docs/convex/components/**
 docs/treg/
 docs/nebius/
 docs/agentmail/

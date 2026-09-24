@@ -9,9 +9,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T04:12:00Z
+- **Last updated:** 2026-09-25T04:24:00Z
 
 ## Log
+
+### 2026-09-25 - convex project initialization, component installation, and documentation
+Configured Convex project 'rank' (`convex.json`) and installed production components `@convex-dev/agent` and `@agentmail/convex`. Mounted both components in `convex/convex.config.ts`, created core database schema in `convex/schema.ts`, exposed the Svix webhook router in `convex/http.ts`, and built reactive email queries, mutations, and triage handlers in `convex/email.ts` and `convex/agent.ts`. Authored full component documentation suites under `docs/convex/components/agent/` and `docs/convex/components/agentmail/` with architecture specs, tools, and webhook guides. Scaffolded corresponding domain wrappers in `lib/convex/agent` and `lib/convex/agentmail` following normalized kebab-case conventions.
 
 ### 2026-09-25 - total emoji removal and automated pre-push enforcement
 Removed all emoji characters across all repository files (README.md, documentation in docs/, diagrams README, and utility scripts). Implemented strict automated scanner `scripts/check-no-emojis.mjs` using Unicode Extended_Pictographic detection to reject any emoji usage anywhere in the codebase. Wired the check into `lefthook.yml` as a mandatory pre-push gate.

@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy"
   },
   "keywords": [
     "nebius",
@@ -17,8 +19,17 @@
     "search",
     "rag",
     "embeddings",
-    "cross-encoder"
+    "cross-encoder",
+    "convex",
+    "agentmail"
   ],
+  "dependencies": {
+    "@agentmail/convex": "^0.1.0",
+    "@convex-dev/agent": "^0.7.3",
+    "@convex-dev/workpool": "^0.3.0",
+    "convex": "^1.18.0",
+    "svix": "^1.70.0"
+  },
   "author": "matthewdonsemail-lab",
   "license": "MIT"
 }
