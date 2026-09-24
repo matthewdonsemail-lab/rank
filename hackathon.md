@@ -9,9 +9,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T03:54:00Z
+- **Last updated:** 2026-09-25T03:56:30Z
 
 ## Log
+
+### 2026-09-25 - hono documentation pull and router reference
+Fetched complete Hono documentation suite (87 guides, full/small llms reference, context, routing, middleware) into `docs/hono/` and added `docs/hono/` to `.gitignore`.
 
 ### 2026-09-25 - agentmail documentation pull and integration reference
 Fetched the complete AgentMail API and documentation suite (237 guides, OpenAPI 3.0 spec, webhooks, WebSockets, and inboxes) into `docs/agentmail/` and added `docs/agentmail/` to `.gitignore`.
