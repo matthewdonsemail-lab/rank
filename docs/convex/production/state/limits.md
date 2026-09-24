@@ -1,0 +1,195 @@
+# Limits
+
+> For AI agents: see [llms.txt](/llms.txt) for the complete documentation index. Markdown versions are available by adding .md to a page URL or requesting Accept: text/markdown.
+
+We’d love for you to have *unlimited* joy building on Convex but engineering practicalities dictate a few limits. This page outlines current limits in the Convex ecosystem.
+
+Many of these limits will become more permissive over time. Please get in touch if any are prohibitive for your application.
+
+Limits are applied per team unless stated otherwise.
+
+Business and Enterprise plans use custom resource allocations unless otherwise noted below.
+
+Free and Starter share the same S16 provisioned performance tier. Free has hard resource caps, while Starter can exceed its included resource amounts with usage-based pricing.
+
+Unless otherwise noted, pricing quoted on this page is for US regions. EU region pricing is 1.3x.
+
+## Team[​](#team "Direct link to Team")
+
+|             | Free/Starter | Professional | Business  | Enterprise |
+| ----------- | ------------ | ------------ | --------- | ---------- |
+| Developers  | 1-6          | 1-20         | 1-50      | Unlimited  |
+| Deployments | 40           | 300          | Unlimited | Unlimited  |
+
+## Database[​](#database "Direct link to Database")
+
+|                   | Free/Starter                                                                           | Professional                                       | Business                                                          | Enterprise                                                        | Notes                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Storage           | Free: 0.5 GB total<br />Starter: 0.5 GB included;<br />$0.22/month per additional GB   | 50 GB included;<br />$0.20/month per additional GB | Serverless: $0.20/month per GB<br />Dedicated: $0.45/month per GB | Serverless: $0.20/month per GB<br />Dedicated: $0.45/month per GB | Includes database rows and indexes, but not files or backups. Each index is priced as another copy of the table. |
+| Database I/O      | Free: 1 GB/month total<br />Starter: 1 GB/month included;<br />$0.22 per additional GB | 50 GB/month included;<br />$0.20 per additional GB | Serverless: $0.20 per GB<br />Dedicated: $0.15 per GB             | Serverless: $0.20 per GB<br />Dedicated: $0.15 per GB             | Document and index data transferred between Convex functions and the underlying database.                        |
+| Tables            | 10,000                                                                                 | 10,000                                             | 10,000                                                            | 10,000                                                            | Per deployment.                                                                                                  |
+| Indexes per table | 32                                                                                     | 32                                                 | 32                                                                | 32                                                                |                                                                                                                  |
+| Fields per index  | 16                                                                                     | 16                                                 | 16                                                                | 16                                                                |                                                                                                                  |
+| Index name length | 64 characters                                                                          | 64 characters                                      | 64 characters                                                     | 64 characters                                                     |                                                                                                                  |
+
+### Restrictions[​](#restrictions "Direct link to Restrictions")
+
+* Table and index names must be valid identifiers and cannot start with an underscore.
+
+## Documents[​](#documents "Direct link to Documents")
+
+Applied per document and to any nested `Object` unless stated otherwise.
+
+|                     |               | Notes                                                            |
+| ------------------- | ------------- | ---------------------------------------------------------------- |
+| Size                | 1 MiB         |                                                                  |
+| Fields              | 1024          | The number of fields/keys                                        |
+| Field name length   | 64 characters | Nested `Object` keys can have length up to 1024 characters.      |
+| Field nesting depth | 16            | How many times objects and arrays can be nested, e.g. `[[[[]]]]` |
+| Array elements      | 8192          |                                                                  |
+
+### Restrictions[​](#restrictions-1 "Direct link to Restrictions")
+
+* Field names must only contain non-control alphanumeric ASCII characters and underscores and must start with an alphabetic character or underscore.
+* Documents cannot contain top-level fields that start with an underscore, other than the system-provided `_id` and `_creationTime` fields.
+* Strings must be valid Unicode sequences with no unpaired surrogates.
+
+## Functions[​](#functions "Direct link to Functions")
+
+|                                                                  | Free/Starter                                                                                            | Professional                                                | Business                                                                   | Enterprise                                                                 | Notes                                                                                                         |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Function calls                                                   | Free: 1,000,000/month total<br />Starter: 1,000,000/month included;<br />$2.20 per additional 1,000,000 | 25,000,000/month included;<br />$2 per additional 1,000,000 | Serverless: $2 per 1,000,000<br />Dedicated: $0.20 per 1,000,000           | Serverless: $2 per 1,000,000<br />Dedicated: $0.20 per 1,000,000           | Explicit client calls, scheduled executions, subscription updates, and file accesses count as function calls. |
+| Query / mutation compute                                         | Free                                                                                                    | Free                                                        | Serverless: Free<br />Dedicated: $0.45/GB-hour                             | Serverless: Free<br />Dedicated: $0.45/GB-hour                             | Query and mutation compute is only billed on dedicated deployments.                                           |
+| Action compute                                                   | Free: 20 GB-hours/month total<br />Starter: 20 GB-hours/month included;<br />$0.33/GB-hour additional   | 250 GB-hours included;<br />$0.30/GB-hour additional        | Convex runtime: $0.16/GB-hour CPU time<br />Node.js runtime: $0.32/GB-hour | Convex runtime: $0.16/GB-hour CPU time<br />Node.js runtime: $0.32/GB-hour | Convex runtime: 64 MiB RAM.<br />Node.js runtime: 512 MiB RAM.                                                |
+| Code size                                                        | 32 MiB                                                                                                  | 32 MiB                                                      | 32 MiB                                                                     | 32 MiB                                                                     | Per deployment.                                                                                               |
+| Function argument size                                           | 16 MiB                                                                                                  | 16 MiB                                                      | 16 MiB                                                                     | 16 MiB                                                                     | Node actions only support arguments up to 5MiB.                                                               |
+| Function return value size                                       | 16 MiB                                                                                                  | 16 MiB                                                      | 16 MiB                                                                     | 16 MiB                                                                     |                                                                                                               |
+| HTTP action response size                                        | 20 MiB                                                                                                  | 20 MiB                                                      | 20 MiB                                                                     | 20 MiB                                                                     | There is no specific limit on request size                                                                    |
+| Length of a console.log line                                     | 4 KiB                                                                                                   | 4 KiB                                                       | 4 KiB                                                                      | 4 KiB                                                                      |                                                                                                               |
+| Log lines per function                                           | 256                                                                                                     | 256                                                         | 256                                                                        | 256                                                                        | Additional logs will be dropped.                                                                              |
+| [Log streaming](/production/integrations/log-streams/.md) limits | 4096 logs, flushed every 5 seconds                                                                      | 4096 logs, flushed every 5 seconds                          | 4096 logs, flushed every 5 seconds                                         | 4096 logs, flushed every 5 seconds                                         | How many logs can be buffered when streaming                                                                  |
+
+## Deployment Classes[​](#deployment-classes "Direct link to Deployment Classes")
+
+Convex has four deployment classes that each have different concurrency limits. These limits are meant to scale as your traffic grows.
+
+S stands for serverless and D stands for dedicated. Dedicated deployments run on their own exclusive database hardware.
+
+The number represents the number of concurrent queries that can be running on a deployment at a given time. As the concurrent query limit gets larger, other internal limits are scaled proportionately to allow your deployments to handle larger workloads.
+
+Below are the deployment classes that each plan has access to:
+
+* Free/Starter: S16
+* Professional: S256
+* Business: S16, S256, D1024, or D2048
+* Enterprise: S16, S256, D1024, or D2048
+
+Free and Starter are limited to S16 with a team deployment limit of 40.
+
+Professional plans get S256 with a team deployment limit of 300.
+
+Business and Enterprise can choose their class on a per-deployment basis. There is a per-deployment fee which varies by deployment class. The deployment fee is waived for paused and idle deployments. Idle deployments are defined as those that have not had any function calls for 30 days.
+
+### Capabilities[​](#capabilities "Direct link to Capabilities")
+
+|                                | S16         | S256        | D1024               | D2048               |
+| ------------------------------ | ----------- | ----------- | ------------------- | ------------------- |
+| Concurrent sessions            | 1,000       | 10,000      | 100,000             | 200,000             |
+| Query cache                    | 1 GB shared | 1 GB shared | 2 GB dedicated      | 4 GB dedicated      |
+| Max dataset                    | 1 TB        | 1 TB        | 4 TB                | 8 TB                |
+| Backup/restore                 | Logical     | Logical     | High-speed physical | High-speed physical |
+| SLA (Business/Enterprise only) | 99.9%       | 99.9%       | 99.95%              | 99.95%              |
+
+## Concurrent Function Executions[​](#concurrent-function-executions "Direct link to Concurrent Function Executions")
+
+Number of functions you can run at a time for each function type.
+
+|                                         | S16   | S256  | D1024\* | D2048\* |
+| --------------------------------------- | ----- | ----- | ------- | ------- |
+| Queries                                 | 16    | 256   | 1024    | 2048    |
+| Mutations                               | 16    | 256   | 512     | 1024    |
+| Mutation write throughput limit         | 4 MiB | 8 MiB | 32 MiB  | 64 MiB  |
+| Convex runtime actions and HTTP actions | 64    | 512   | 1024    | 2048    |
+| Node actions                            | 64    | 256   | 1024    | 2048    |
+| Scheduled jobs                          | 8     | 256   | 512     | 1024    |
+
+\* Limits can be increased for Business and Enterprise plan customers on a case-by-case basis. Send us a support message through the dashboard to discuss your needs. Usually this is only needed if your product has highly bursty traffic.
+
+## Execution time and scheduling[​](#execution-time-and-scheduling "Direct link to Execution time and scheduling")
+
+|                                                                               |            | Notes                                                                                                                   |
+| ----------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Query/mutation execution time                                                 | 1 second   | Limit applies only to user code and doesn’t include database operations.                                                |
+| Convex runtime action execution time                                          | 30 minutes |                                                                                                                         |
+| Node runtime action execution time                                            | 10 minutes |                                                                                                                         |
+| Scheduled functions                                                           | 1000       | The number of other functions a single mutation can schedule.                                                           |
+| Scheduled function argument size                                              | 4 MiB      |                                                                                                                         |
+| Total size of all scheduled function arguments scheduled in a single mutation | 16 MiB     | Applies only to functions scheduled from mutations, not actions.                                                        |
+| Concurrent IO operations per function                                         | 1000       | The number of IO operations a single function can perform, e.g., a database operation, or a fetch request in an action. |
+| Outstanding scheduled functions                                               | 1,000,000  |                                                                                                                         |
+
+## Transactions[​](#transactions "Direct link to Transactions")
+
+These limits apply to each `query` or `mutation` function. To ensure you're within the limits, there are [tools to calculate and limit consumption within a transaction](/database/writing-data.md#write-performance-and-limits).
+
+|                            |        | Notes                                                     |
+| -------------------------- | ------ | --------------------------------------------------------- |
+| Data read                  | 16 MiB | Data not returned due to a `filter` counts as scanned     |
+| Data written               | 16 MiB |                                                           |
+| Documents scanned          | 32,000 | Documents not returned due to a `filter` count as scanned |
+| Index ranges read          | 4,096  | The number of calls to `db.get` and `db.query`.           |
+| Documents written          | 16,000 |                                                           |
+| Function return value size | 16 MiB |                                                           |
+
+## Environment Variables[​](#environment-variables "Direct link to Environment Variables")
+
+Applied per-deployment.
+
+|                                    |                |
+| ---------------------------------- | -------------- |
+| Number of variables                | 512            |
+| Total size of all names and values | 512 KiB        |
+| Maximum name length                | 256 characters |
+| Maximum value size                 | 8 KiB          |
+
+## File Storage[​](#file-storage "Direct link to File Storage")
+
+|             | Free/Starter                                                                            | Professional                                        | Business           | Enterprise         | Notes                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------- |
+| Storage     | Free: 1 GB total<br />Starter: 1 GB included;<br />$0.033/month per additional GB       | 100 GB included;<br />$0.03/month per additional GB | $0.03/month per GB | $0.03/month per GB | Includes user files and backups.                                                                          |
+| Data egress | Free: 1 GB/month total<br />Starter: 1 GB/month included;<br />$0.132 per additional GB | 50 GB/month included;<br />$0.12 per additional GB  | $0.12 per GB       | $0.12 per GB       | Includes serving user files, accessing user files inside functions, and generating and restoring backups. |
+
+## Search pricing[​](#search-pricing "Direct link to Search pricing")
+
+|                | Free/Starter                                                                                                              | Professional                                                               | Business                  | Enterprise                | Notes                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------- | ------------------------- | ----------------------------------------- |
+| Search storage | Free: 0.5 GB total<br />Starter: 0.5 GB included;<br />$0.55/month per additional GB                                      | 1 GB included;<br />$0.50/month per additional GB                          | $0.50/month per GB        | $0.50/month per GB        | Shared by text and vector search indexes. |
+| Search queries | Free: 3,000 query-GBs/month total<br />Starter: 3,000 query-GBs/month included;<br />$0.11 per additional 1,000 query-GBs | 50,000 query-GBs/month included;<br />$0.10 per additional 1,000 query-GBs | $0.10 per 1,000 query-GBs | $0.10 per 1,000 query-GBs | Shared by text and vector search queries. |
+
+## Full text search[​](#full-text-search "Direct link to Full text search")
+
+|                          | Value |
+| ------------------------ | ----- |
+| Search indexes per table | 4     |
+| Filters per search index | 16    |
+| Terms per search query   | 16    |
+| Filters per search query | 8     |
+| Maximum term length      | 32 B  |
+| Maximum result set       | 1024  |
+
+## Vector search[​](#vector-search "Direct link to Vector search")
+
+|                          | Value                    |
+| ------------------------ | ------------------------ |
+| Vector indexes per table | 4                        |
+| Filters per vector index | 16                       |
+| Terms per search query   | 16                       |
+| Vectors to search by     | 1                        |
+| Dimension fields         | 1 (value between 2-4096) |
+| Filters per search query | 64                       |
+| Maximum term length      | 32 B                     |
+| Maximum result set       | 256 (defaults to 10)     |
+
+If any of these limits don't work for you, [let us know](https://convex.dev/community)!
+
+Please see our [Free, Starter, and Professional pricing page](https://www.convex.dev/pricing) and [Business and Enterprise pricing page](https://www.convex.dev/enterprise/pricing) for current resource limits. After these limits are hit on the Free plan, new mutations that attempt to commit more insertions or updates may fail. Starter, Professional, Business, and Enterprise plans can exceed their included resource amounts with usage-based pricing, subject to deployment-class limits.

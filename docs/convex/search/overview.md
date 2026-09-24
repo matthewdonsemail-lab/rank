@@ -1,0 +1,17 @@
+# AI & Search
+
+> For AI agents: see [llms.txt](/llms.txt) for the complete documentation index. Markdown versions are available by adding .md to a page URL or requesting Accept: text/markdown.
+
+Whether building RAG enabled chatbots or quick search in your applications, Convex provides easy apis to create powerful AI and search enabled products.
+
+[Vector Search](/search/vector-search.md) enables searching for documents based on their semantic meaning. It uses vector embeddings to calculate similarity and retrieve documents that are similar to a given query. Vector search is a key part of common AI techniques like RAG.
+
+[Full Text Search](/search/text-search.md) enables keyword and phrase search within your documents. It supports prefix matching to enable typeahead search. Convex full text search is also reactive and always up to date like all Convex queries, making it easy to build reliable quick search boxes.
+
+[Convex Actions](/functions/actions.md) easily enable you to call AI apis, save data to your database, and drive your user interface. See examples of how you can use this to [build sophisticated AI applications](https://stack.convex.dev/tag/AI).
+
+Related posts from
+
+<!-- -->
+
+[![Stack](/img/stack-logo-dark.svg)![Stack](/img/stack-logo-light.svg)](https://stack.convex.dev/)

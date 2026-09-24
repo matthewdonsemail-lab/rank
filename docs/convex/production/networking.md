@@ -1,0 +1,27 @@
+> For AI agents: see [llms.txt](/llms.txt) for the complete documentation index. Markdown versions are available by adding .md to a page URL or requesting Accept: text/markdown.
+
+# Networking
+
+## Egress IP addresses[​](#egress-ip-addresses "Direct link to Egress IP addresses")
+
+All outbound requests from your Convex deployment — including [`fetch`](/functions/actions.md) calls in your functions (in both the Convex and Node.js [runtimes](/functions/runtimes.md)), OIDC metadata and JWKS lookups for [authentication](/auth/overview.md), [log streaming](/production/integrations/log-streams/.md), and other external connections — originate from the IP addresses listed below.
+
+If you need to configure a firewall or allowlist for an external service to accept traffic from Convex, add the addresses for your deployment's [region](/production/regions.md).
+
+caution
+
+These IP addresses are shared across all Convex deployments in a region, not just yours. Do not rely on source IP alone to authenticate or authorize incoming requests.
+
+### US East (N. Virginia)[​](#us-east-n-virginia "Direct link to US East (N. Virginia)")
+
+| Protocol | Addresses                                             |
+| -------- | ----------------------------------------------------- |
+| IPv4     | `216.235.222.0/24`                                    |
+| IPv6     | `2600:1f18:77e:2300::/56`, `2600:1f10:4a09:7c00::/56` |
+
+### EU West (Ireland)[​](#eu-west-ireland "Direct link to EU West (Ireland)")
+
+| Protocol | Addresses                                                                                           |
+| -------- | --------------------------------------------------------------------------------------------------- |
+| IPv4     | `3.248.173.188`, `34.242.144.108`, `54.170.181.63`, `54.195.47.143`, `54.73.189.39`, `63.33.186.66` |
+| IPv6     | `2a05:d018:6f:e900::/56`, `2a05:d018:3aa:3c00::/56`                                                 |

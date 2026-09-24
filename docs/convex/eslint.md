@@ -1,0 +1,778 @@
+# ESLint rules
+
+> For AI agents: see [llms.txt](/llms.txt) for the complete documentation index. Markdown versions are available by adding .md to a page URL or requesting Accept: text/markdown.
+
+The Convex ESLint plugin provides linter rules that enforce best practices for Convex functions. Let us know if there's a rule you would find helpful!
+
+## Setup[​](#setup "Direct link to Setup")
+
+Install the plugin with:
+
+```
+npm i @convex-dev/eslint-plugin --save-dev
+```
+
+For **ESLint 9+** (flat config, using `eslint.config.js`), add this to your `eslint.config.js` file:
+
+```
+import { defineConfig } from "eslint/config";
+
+
+
+import convexPlugin from "@convex-dev/eslint-plugin";
+
+
+
+export default defineConfig([
+
+  // Other configurations
+
+
+
+  ...convexPlugin.configs.recommended,
+
+]);
+```
+
+If you’re using the deprecated `.eslintrc.js` format
+
+Install these two libraries:
+
+```
+npm i @typescript-eslint/eslint-plugin @convex-dev/eslint-plugin --save-dev
+```
+
+In `.eslintrc.js`, add:
+
+```
+module.exports =
+
+  extends: [
+
+    // Other configurations
+
+    "plugin:@typescript-eslint/recommended",
+
+    "plugin:@convex-dev/recommended",
+
+  ],
+
+  ignorePatterns: ["node_modules/", "dist/", "build/"],
+
+};
+```
+
+If your Convex functions are in a directory other than `convex`
+
+By default, the Convex ESLint plugin will only apply rules in the `convex` directory.
+
+If you’re [customizing the Convex directory location](/production/project-configuration.md#changing-the-convex-folder-name-or-location), here’s how to adapt your ESLint configuration:
+
+```
+// eslint.config.js
+
+import { defineConfig } from "eslint/config";
+
+
+
+import convexPlugin from "@convex-dev/eslint-plugin";
+
+
+
+const recommendedConfig = convexPlugin.configs.recommended[0];
+
+const recommendedRules = recommendedConfig.rules;
+
+
+
+export default defineConfig([
+
+  // Other configurations go here...
+
+
+
+  // Custom configuration with modified directory pattern
+
+  {
+
+    files: ["**/src/convex/**/*.ts"],
+
+    plugins: {
+
+      "@convex-dev": convexPlugin,
+
+    },
+
+    rules: recommendedRules,
+
+  },
+
+]);
+```
+
+If you’re using the `next lint` command from Next.js
+
+For `next lint` to run ESLint on your `convex` directory you need to add that directory to the default set of directories. Add this section to your `next.config.ts`:
+
+```
+const nextConfig: NextConfig = {
+
+  /* other options here */
+
+
+
+  eslint: {
+
+    dirs: ["pages", "app", "components", "lib", "src", "convex"],
+
+  },
+
+};
+```
+
+You can also use the plugin **with Oxlint**. Add this to your `oxlint.config.ts` file:
+
+oxlint.config.ts
+
+```
+import { defineConfig } from "oxlint";
+
+import convexPlugin from "@convex-dev/eslint-plugin";
+
+
+
+export default defineConfig({
+
+  jsPlugins: ["@convex-dev/eslint-plugin"],
+
+  ignorePatterns: ["convex/_generated"],
+
+  overrides: [
+
+    {
+
+      files: ["**/convex/**/*.ts"],
+
+      rules: convexPlugin.configs.recommended[0].rules,
+
+    },
+
+  ],
+
+});
+```
+
+Oxlint limitations
+
+Oxlint does not expose TypeScript type information to JS plugins, so type-aware rules and their autofixes (`explicit-table-ids`, `no-collect-in-query`) are unavailable when running the plugin through Oxlint.
+
+## Rules[​](#rules "Direct link to Rules")
+
+| Rule                                                                                                                                     | Recommended | Auto-fixable |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ |
+| [`@convex-dev/no-old-registered-function-syntax`](#no-old-registered-function-syntax)<br />Prefer object syntax for registered functions | ✅          | 🔧           |
+| [`@convex-dev/require-argument-validators`](#require-argument-validators)<br />Require argument validators for Convex functions          | ✅          | 🔧           |
+| [`@convex-dev/explicit-table-ids`](#explicit-table-ids)<br />Require explicit table names in database operations                         | ✅          | 🔧           |
+| [`@convex-dev/no-filter-in-query`](#no-filter-in-query)<br />Warn on `.filter()` in database queries (inefficient)                       | ✅          |              |
+| [`@convex-dev/no-top-of-hour-crons`](#no-top-of-hour-crons)<br />Warn on cron jobs scheduled exactly on the hour                         | ✅          |              |
+| [`@convex-dev/no-schema-import-cycle`](#no-schema-import-cycle)<br />Prevent using the schema in a file that the schema imports          | ✅          |              |
+| [`@convex-dev/no-duplicate-indexes`](#no-duplicate-indexes)<br />Warn on indexes whose fields are a prefix of another index's            | ✅          |              |
+| [`@convex-dev/no-process-env`](#no-process-env)<br />Prefer the typed `env` object over `process.env`                                    | ✅          | 🔧           |
+| [`@convex-dev/import-wrong-runtime`](#import-wrong-runtime)<br />Prevent Convex runtime files from importing from Node runtime files     |             |              |
+| [`@convex-dev/no-collect-in-query`](#no-collect-in-query)<br />Prefer `.take()` / `.paginate()` over `.collect()` in queries             |             |              |
+| [`@convex-dev/require-access-control`](#require-access-control)<br />Require an access control check in public functions                 |             |              |
+
+### no-old-registered-function-syntax[​](#no-old-registered-function-syntax "Direct link to no-old-registered-function-syntax")
+
+Prefer object syntax for registered functions.
+
+Convex queries, mutations, and actions can be defined with a single function or with an object containing a handler property. Using the objects makes it possible to add argument and return value validators, so is always preferable.
+
+```
+// ✅ Allowed by this rule:
+
+export const list = query({
+
+  handler: async (ctx) => {
+
+    const data = await ctx.db.query("messages").collect();
+
+    ...
+
+  },
+
+});
+
+
+
+// ❌ Not allowed by this rule:
+
+export const list = query(async (ctx) => {
+
+  const data = await ctx.db.query("messages").collect();
+
+  ...
+
+});
+```
+
+### require-argument-validators[​](#require-argument-validators "Direct link to require-argument-validators")
+
+Require argument validators for Convex functions.
+
+Convex queries, mutations, and actions can validate their arguments before beginning to run the handler function. Besides being a concise way to validate, the types of arguments, using argument validators enables generating more descriptive function specs and therefore OpenAPI bindings.
+
+```
+// ✅ Allowed by this rule:
+
+export const list = query({
+
+  args: {},
+
+  handler: async (ctx) => {
+
+    ...
+
+  },
+
+});
+
+
+
+// ✅ Allowed by this rule:
+
+export const list = query({
+
+  args: { channel: v.id('channel') },
+
+  handler: async (ctx, { channel }) => {
+
+    ...
+
+  },
+
+});
+
+
+
+// ❌ Not allowed with option { ignoreUnusedArguments: false } (default)
+
+// ✅ Allowed with option { ignoreUnusedArguments: true }
+
+export const list = query({
+
+  handler: async (ctx) => {
+
+    ...
+
+  },
+
+});
+
+
+
+// ❌ Not allowed by this rule:
+
+export const list = query({
+
+  handler: async (ctx, { channel }: { channel: Id<"channel"> }) => {
+
+    ...
+
+  },
+
+});
+```
+
+This rule can be customized to tolerate functions that don’t define an argument validator but don’t use their arguments. Here’s how you can set up the rule to work this way:
+
+```
+// eslint.config.js
+
+
+
+export default defineConfig([
+
+  // Your other rules…
+
+
+
+  {
+
+    files: ["**/convex/**/*.ts"],
+
+    rules: {
+
+      "@convex-dev/require-args-validator": [
+
+        "error",
+
+        {
+
+          ignoreUnusedArguments: true,
+
+        },
+
+      ],
+
+    },
+
+  },
+
+]);
+```
+
+### explicit-table-ids[​](#explicit-table-ids "Direct link to explicit-table-ids")
+
+Require explicit table names in database operations.
+
+Starting from version 1.31.0 of the `convex` npm package, we recommend including the table name as the first argument to database operations (`db.get`, `db.replace`, `db.patch`, `db.delete`).
+
+This approach is more secure because it prevents vulnerabilities when an ID from one table is incorrectly typed as belonging to another table. The implicit syntax (where table names are inferred from the ID) will be deprecated in the future to give developers more control over ID generation. For both these reasons, we recommend developers to migrate to the new format.
+
+This rule helps migrate code from the old implicit format to the new explicit format. It uses TypeScript type information to automatically infer the table name from the `Id<"tableName">` type and provides automatic fixes.
+
+```
+const messageId: Id<"messages"> = "123" as Id<"messages">;
+
+
+
+// ✅ Allowed by this rule:
+
+const message = await ctx.db.get("messages", messageId);
+
+await ctx.db.patch("messages", messageId, { text: "updated" });
+
+await ctx.db.replace("messages", messageId, {
+
+  text: "replaced",
+
+  author: "Alice",
+
+});
+
+await ctx.db.delete("messages", messageId);
+
+
+
+// ❌ Not allowed by this rule:
+
+const message = await ctx.db.get(messageId);
+
+await ctx.db.patch(messageId, { text: "updated" });
+
+await ctx.db.replace(messageId, { text: "replaced", author: "Alice" });
+
+await ctx.db.delete(messageId);
+```
+
+typescript-eslint required
+
+In order for this rule to work, [typescript-eslint](https://typescript-eslint.io) must be set up in your ESLint configuration. If typescript-eslint is installed and the rule doesn’t seem to work, please make sure that [type-aware linting](https://typescript-eslint.io/troubleshooting/typed-linting/) is enabled.
+
+Note that if you’re not using ESLint, you can alternatively use the `@convex-dev/codemod` CLI tool to automatically migrate to the new format:
+
+```
+npx @convex-dev/codemod@latest explicit-ids
+```
+
+[Learn more on news.convex.dev →](https://news.convex.dev/db-table-name/)
+
+### no-filter-in-query[​](#no-filter-in-query "Direct link to no-filter-in-query")
+
+Warn when using `.filter()` in database queries.
+
+Convex supports filtering queries with the `.filter()` method, but it is inefficient because the database will read all the documents, and only then filter out the documents that don’t match the filter.
+
+Try replacing the call to `.filter()` with a call to `.withIndex()` if possible. This is especially important if the number of documents you’re filtering on is large (1000+) or unbounded.
+
+Instead, you can use [indexes](/database/reading-data/indexes/.md) so that the database only needs to read the relevant documents.
+
+See [*Indexes and Query Performance*](/database/reading-data/indexes/indexes-and-query-perf.md) to learn more, and [*Using TypeScript to Write Complex Query Filters*](https://stack.convex.dev/complex-filters-in-convex) for more advanced filtering strategies.
+
+```
+// ❌ This looks through all the books, and then collects the ones authored by Jane Austen
+
+const books = await ctx.db
+
+  .query("books")
+
+  .filter((q) => q.eq(q.field("author"), "Jane Austen"))
+
+  .collect();
+
+
+
+// ✅ This only reads the books authored by Jane Austen
+
+const austenBooks = await ctx.db
+
+  .query("books")
+
+  .withIndex("by_author", (q) => q.eq("author", "Jane Austen"))
+
+  .collect();
+```
+
+If it is not possible to replace `.filter()` in your query, you can silence this warning with:
+
+```
+// eslint-disable-next-line @convex-dev/no-filter-in-query
+```
+
+### no-top-of-hour-crons[​](#no-top-of-hour-crons "Direct link to no-top-of-hour-crons")
+
+Warn when a cron job is scheduled at the exact top of the hour.
+
+The top of the hour is the busiest time on the clock: apps receive the most inbound traffic, webhooks, and scheduled work right at `:00`. Pinning a cron there means your background work competes with that peak, making it more likely to hit your app's limits.
+
+The simplest fix is to omit `minuteUTC`. Convex then picks a minute for you and spreads runs across the hour. You can also set a specific off-peak minute if you need the job to run at a predictable time.
+
+```
+// ❌ Runs at the busiest moment of the hour:
+
+crons.hourly("cleanup", { minuteUTC: 0 }, internal.tasks.cleanup);
+
+crons.cron("nightly", "0 3 * * *", internal.tasks.nightly);
+
+
+
+// ✅ Let Convex pick and spread the minute:
+
+crons.hourly("cleanup", internal.tasks.cleanup);
+
+crons.daily("nightly", { hourUTC: 3 }, internal.tasks.nightly);
+
+
+
+// ✅ Or choose a specific off-peak minute:
+
+crons.hourly("cleanup", { minuteUTC: 37 }, internal.tasks.cleanup);
+```
+
+If the job really must run at the top of the hour, you can silence this warning with:
+
+```
+// eslint-disable-next-line @convex-dev/no-top-of-hour-crons
+
+crons.hourly(
+
+  "send a message at the start of every hour",
+
+  { minuteUTC: 0 },
+
+  internal.messages.sendHourlyDigest,
+
+);
+```
+
+### no-schema-import-cycle[​](#no-schema-import-cycle "Direct link to no-schema-import-cycle")
+
+Prevent using the schema value in a file that `schema.ts` imports.
+
+`schema.doc()`, `schema.id()` and `schema.tables` read the schema object, so they only work once `schema.ts` has finished evaluating. If `schema.ts` imports the file that uses them, that file runs first and the schema is still `undefined`, so the push fails with `TypeError: Cannot read properties of undefined (reading 'id')`.
+
+```
+// convex/schema.ts
+
+import { userFields } from "./validators"; // <-- runs validators.ts first
+
+
+
+export default defineSchema({
+
+  users: defineTable(userFields),
+
+});
+```
+
+```
+// convex/validators.ts
+
+import schema from "./schema";
+
+
+
+export const userFields = { name: v.string() };
+
+
+
+// ❌ `schema` is undefined here, because schema.ts is still evaluating:
+
+export const userId = schema.id("users");
+
+
+
+// ✅ Use v.id() in files the schema imports:
+
+export const userId = v.id("users");
+```
+
+Files the schema doesn't import — the usual home for queries and mutations — can use `schema.doc()` and `schema.id()` freely. References inside a function body are also fine, since they run after both modules have loaded.
+
+### no-duplicate-indexes[​](#no-duplicate-indexes "Direct link to no-duplicate-indexes")
+
+Warn when a table's index indexes a prefix of the fields of another of its indexes.
+
+A Convex index sorts documents by its fields in order, so a query can filter on any leading subset of them. An index on `["author", "channel"]` selects the same documents as an index on `["author"]` for any query that only constrains `author`, so keeping both costs write throughput and storage — every insert and update to the table writes a row to every index on it — without widening what you can query.
+
+```
+// ❌ "by_author" indexes a prefix of "by_author_and_channel":
+
+defineTable({ author: v.string(), channel: v.string() })
+
+  .index("by_author", ["author"])
+
+  .index("by_author_and_channel", ["author", "channel"]);
+
+
+
+// ✅ Query the longer index with a prefix of its fields:
+
+defineTable({ author: v.string(), channel: v.string() }).index(
+
+  "by_author_and_channel",
+
+  ["author", "channel"],
+
+);
+
+
+
+await ctx.db
+
+  .query("messages")
+
+  .withIndex("by_author_and_channel", (q) => q.eq("author", author))
+
+  .collect();
+
+
+
+// ✅ Neither indexes a prefix of the other, so both are needed:
+
+defineTable({ author: v.string(), channel: v.string() })
+
+  .index("by_channel", ["channel"])
+
+  .index("by_author_and_channel", ["author", "channel"]);
+```
+
+[Staged indexes](/database/reading-data/indexes/.md#staged-indexes) are exempt from this rule, since staging the longer index while the shorter one is still live is how you replace one index with another without a slow backfill blocking your deploy.
+
+#### When not to use this rule[​](#when-not-to-use-this-rule "Direct link to When not to use this rule")
+
+There is one case where this rule might trigger a false positive. Convex [appends `_creationTime`](/database/reading-data/indexes/.md) to every index. If you need to query documents ordered by the fields of the shorter index *then* `_creationTime`, you will need to keep both indexes. For example, if in the example below you need to query documents sorted by `author` *then* `_creationTime`, keep the `by_author` index and disable the ESLint rule where the index is defined:
+
+```
+// eslint-disable-next-line @convex-dev/no-duplicate-indexes
+
+.index("by_author", ["author"])
+```
+
+### no-process-env[​](#no-process-env "Direct link to no-process-env")
+
+Prefer the typed `env` object over `process.env`.
+
+[Declaring your environment variables](/production/environment-variables.md#declaring) in `convex/convex.config.ts` gives you a typed `env` object to import from `_generated/server`. Reading them that way means TypeScript catches typos and tells you which variables are optional, and the deploy fails early when a required variable is missing.
+
+```
+// ❌ Not allowed by this rule:
+
+const apiKey = process.env.GIPHY_KEY; // `string | undefined`, and typos compile
+
+
+
+// ✅ Allowed by this rule:
+
+import { env } from "./_generated/server";
+
+
+
+const apiKey = env.GIPHY_KEY; // `string`, and typos are a build error
+```
+
+The rule provides an autofix when the environment variable is already declared in your `convex.config.ts` (or is one of the [system environment variables](/production/environment-variables.md#system-environment-variables)). If the variable isn't declared, the rewrite is offered as an editor suggestion instead of a fix.
+
+convex/convex.config.ts
+
+```
+import { defineApp } from "convex/server";
+
+import { v } from "convex/values";
+
+
+
+const app = defineApp({
+
+  env: { GIPHY_KEY: v.string() },
+
+});
+
+
+
+export default app;
+```
+
+### import-wrong-runtime[​](#import-wrong-runtime "Direct link to import-wrong-runtime")
+
+Prevent Convex runtime files from importing from Node runtime files (files with a `"use node"` directive).
+
+This rule is experimental. Please let us know if you find it helpful!
+
+```
+// In a file that doesn’t use `"use node"`:
+
+
+
+// ✅ Allowed by this rule:
+
+import { someFunction } from "./someOtherFile"; // where someOtherFile doesn't use `"use node"`
+
+
+
+// ❌ Not allowed by this rule:
+
+import { someFunction } from "./someNodeFile"; // where someNodeFile uses `"use node"`
+```
+
+### no-collect-in-query[​](#no-collect-in-query "Direct link to no-collect-in-query")
+
+Prefer `.take()` / `.paginate()` over `.collect()` in queries.
+
+typescript-eslint required
+
+In order for this rule to work, [typescript-eslint](https://typescript-eslint.io) must be set up in your ESLint configuration. If typescript-eslint is installed and the rule doesn’t seem to work, please make sure that [type-aware linting](https://typescript-eslint.io/troubleshooting/typed-linting/) is enabled.
+
+You should avoid using `.collect()` in queries that can return a large number of documents at once. In these queries, using `.collect()` can lead to excessive bandwidth usage and mutation conflicts, and the query can also fail if it reaches the [Convex query limits](/production/state/limits.md#transactions).
+
+Prefer `.take(N)` if you only need the first *N* results, or `.paginate()` if you want to page through results.
+
+If you know the query will always return a small number of results, you can disable this rule for that line with:
+
+```
+// eslint-disable-next-line @convex-dev/no-collect-in-query
+
+const results = await ctx.db.query("roles").collect();
+```
+
+### require-access-control[​](#require-access-control "Direct link to require-access-control")
+
+Require an access control check in public functions.
+
+Public queries, mutations and actions [can be called by anyone](/understanding/best-practices/.md#use-some-form-of-access-control-for-all-public-functions), so forgetting an access control check might cause malicious users to read or write data they shouldn’t have access to.
+
+This rule reports every exported `query`, `mutation` or `action` whose handler doesn’t call one of your access control functions. It recognizes these functions by name: by default, any call whose name starts with `require`, `assert`, `check`, `ensure`, `can` or `has`. This covers helpers that throw (`requireUser(ctx)`) as well as helpers that return a boolean (`canEditNote(ctx)`).
+
+```
+// ✅ Allowed by this rule:
+
+export const list = query({
+
+  args: {},
+
+  handler: async (ctx) => {
+
+    const user = await requireUser(ctx);
+
+    // …
+
+  },
+
+});
+
+
+
+// ✅ Allowed by this rule: a boolean check in the condition of an `if`
+
+export const update = mutation({
+
+  args: {},
+
+  handler: async (ctx) => {
+
+    if (!(await canEditNote(ctx))) {
+
+      throw new Error("Unauthorized");
+
+    }
+
+    // …
+
+  },
+
+});
+
+
+
+// ✅ Allowed by this rule: methods count too
+
+export const remove = mutation({
+
+  args: {},
+
+  handler: async (ctx) => {
+
+    await authz.require(ctx, userId, "documents:delete");
+
+    // …
+
+  },
+
+});
+
+
+
+// ✅ Not checked: internal functions can’t be called from the internet
+
+export const cleanup = internalMutation({
+
+  args: {},
+
+  handler: async (ctx) => {
+
+    // …
+
+  },
+
+});
+
+
+
+// ❌ Not allowed by this rule:
+
+export const send = mutation({
+
+  args: {},
+
+  handler: async (ctx) => {
+
+    await ctx.db.insert("messages", { body: "hello" });
+
+  },
+
+});
+```
+
+If your access control functions are named differently, you can customize the pattern in the ESLint settings:
+
+```
+"@convex-dev/require-access-control": [
+
+  "error",
+
+  {
+
+    pattern: "^(require|authorize)",
+
+  },
+
+],
+```
+
+When using this rule, please consider the following limitations:
+
+* The rule only verifies that a matching function is called. It can’t tell whether that check is the right one for this function (e.g. `requireIsLoggedIn` vs `requireIsAdmin`), or whether you act on the boolean it returns.
+* The call has to be a top-level statement of the handler or the condition of a top-level `if`, so a check nested in an `if` body or a `try` block isn’t detected.
+* This rule doesn’t check HTTP actions.
+* This rule doesn’t check [custom functions](https://github.com/get-convex/convex-helpers/blob/main/packages/convex-helpers/README.md#custom-functions).
