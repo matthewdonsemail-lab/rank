@@ -33,13 +33,47 @@ for (const library of libraries) {
   }
 
   const libraryPath = join(libDir, library);
+  const directIndexPath = join(libraryPath, 'index.ts');
+
+  // Case A: Standalone domain package directly under lib/ (e.g. lib/brand)
+  if (existsSync(directIndexPath)) {
+    const helpersPath = join(libraryPath, 'helpers');
+    if (existsSync(helpersPath) && statSync(helpersPath).isDirectory()) {
+      const helperIndexPath = join(helpersPath, 'index.ts');
+      if (!existsSync(helperIndexPath)) {
+        violations.push(
+          `lib/${library}/helpers: Missing required barrel "helpers/index.ts".`
+        );
+      }
+
+      const helperFiles = readdirSync(helpersPath).filter((f) => f.endsWith('.ts'));
+      for (const hFile of helperFiles) {
+        const fullHelperPath = join(helpersPath, hFile);
+        const content = readFileSync(fullHelperPath, 'utf8');
+        const lines = content.split('\n');
+        lines.forEach((line, lineNum) => {
+          if (
+            (line.includes("from '../index") || line.includes('from "../index')) &&
+            !line.trim().startsWith('//')
+          ) {
+            violations.push(
+              `lib/${library}/helpers/${hFile}:${lineNum + 1}: Prohibited circular import from parent index barrel.`
+            );
+          }
+        });
+      }
+    }
+    continue;
+  }
+
+  // Case B: Multi-domain library containing domain subdirectories (e.g. lib/convex/agent)
   const domains = readdirSync(libraryPath, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
   if (domains.length === 0) {
     violations.push(
-      `lib/${library}: Library directory must contain at least one domain subdirectory.`
+      `lib/${library}: Library directory must contain at least one domain subdirectory or an entrypoint "index.ts".`
     );
     continue;
   }

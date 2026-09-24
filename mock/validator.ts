@@ -38,11 +38,22 @@ export function validateFixtureDocBacking(
   }
 
   // Verify that required fields exist in data
-  if (Array.isArray(data)) {
-    if (data.length === 0) {
+  const isBrandContainer =
+    data && typeof data === "object" && "brand" in data && typeof (data as any).brand === "object" && (data as any).brand !== null;
+  const isSourcesContainer =
+    data && typeof data === "object" && !("identity" in data) && "sources" in data && Array.isArray((data as any).sources);
+
+  const target = isBrandContainer
+    ? (data as any).brand
+    : isSourcesContainer
+    ? (data as any).sources
+    : data;
+
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
       errors.push("Fixture array is empty; cannot validate schema conformance.");
     } else {
-      data.forEach((item, idx) => {
+      target.forEach((item, idx) => {
         if (!item || typeof item !== "object") {
           errors.push(`Item at index ${idx} is not an object.`);
           return;
@@ -54,9 +65,9 @@ export function validateFixtureDocBacking(
         }
       });
     }
-  } else if (data && typeof data === "object") {
+  } else if (target && typeof target === "object") {
     for (const field of metadata.requiredFields) {
-      if (!(field in data) || (data as Record<string, unknown>)[field] === undefined) {
+      if (!(field in target) || (target as Record<string, unknown>)[field] === undefined) {
         errors.push(`Object is missing required field: ${field}`);
       }
     }
@@ -86,6 +97,7 @@ export function wrapWithDocBacking<T>(data: T, metadata: DocBackingMetadata): {
     specUrl: string;
     lastVerified: string;
     verified: boolean;
+    errors?: string[];
   };
 } {
   const validation = validateFixtureDocBacking("runtime-response", data, metadata, true);
@@ -98,6 +110,7 @@ export function wrapWithDocBacking<T>(data: T, metadata: DocBackingMetadata): {
       specUrl: metadata.specUrl,
       lastVerified: metadata.lastVerified,
       verified: validation.valid,
+      errors: validation.errors,
     },
   };
 }

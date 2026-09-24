@@ -14,6 +14,9 @@ import { docBacking as agentMailThreadsDoc } from "./data/agentmail-threads.ts";
 import { docBacking as agentMailMessagesDoc } from "./data/agentmail-messages.ts";
 import { docBacking as tregToolsDoc } from "./data/treg-tools.ts";
 import { docBacking as tregCallsDoc } from "./data/treg-calls.ts";
+import { docBacking as brandDoc } from "./data/brand.ts";
+import { docBacking as brandSourcesDoc } from "./data/brand-sources.ts";
+import { docBacking as brandIntelDoc } from "./data/brand-intelligence.ts";
 import { wrapWithDocBacking } from "./validator.ts";
 import type { RankInferenceRequest, TregExecuteRequest, DocBackingMetadata } from "./schema.ts";
 
@@ -107,6 +110,16 @@ export class ConvexMockClient {
         docMeta = tregCallsDoc;
         break;
 
+      case "brand:get":
+        result = mockStore.getBrand();
+        docMeta = brandDoc;
+        break;
+
+      case "brand:sources:list":
+        result = mockStore.getBrandSources();
+        docMeta = brandSourcesDoc;
+        break;
+
       default:
         throw new Error(`Unknown mock query endpoint: ${endpoint}`);
     }
@@ -149,6 +162,27 @@ export class ConvexMockClient {
         };
         mockStore.apiKeys.unshift(newKey);
         return newKey;
+      }
+
+      case "brand:save": {
+        return mockStore.upsertBrand(args);
+      }
+
+      case "brand:appendIntelligence": {
+        return mockStore.appendBrandIntelligence(args);
+      }
+
+      case "brand:sources:index": {
+        return mockStore.indexBrandSources(args as { urls?: string[]; sitemap?: boolean });
+      }
+
+      case "brand:sources:remove": {
+        return mockStore.removeBrandSource(String(args.url || ""));
+      }
+
+      case "brand:clear": {
+        mockStore.clearBrand();
+        return null;
       }
 
       default:

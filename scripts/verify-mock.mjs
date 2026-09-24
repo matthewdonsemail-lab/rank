@@ -25,6 +25,13 @@ async function main() {
   const mailMessage = mockStore.agentMailMessages[0];
   const tregTool = mockStore.tregTools[0];
   const tregCall = mockStore.tregCalls[0];
+  const brand = mockStore.getBrand();
+
+  if (!brand || brand.id !== 'brand-default') throw new Error('Brand record missing from mockStore');
+  if (!brand.identity.name) throw new Error('Brand missing identity.name');
+  if (brand.offerings.length === 0) throw new Error('Brand missing offerings');
+  if (brand.sources.length === 0) throw new Error('Brand missing sources');
+  if (!brand.channels.reddit) throw new Error('Brand missing reddit channel profile');
 
   if (org.ownerId !== user.id) throw new Error('Referential mismatch: org.ownerId != user.id');
   if (ws.organizationId !== org.id) throw new Error('Referential mismatch: ws.organizationId != org.id');
@@ -73,6 +80,8 @@ async function main() {
     { method: 'GET', path: '/api/agentmail/messages?threadId=mth_rank_01', validate: (d) => Array.isArray(d) && d.length >= 2 },
     { method: 'GET', path: '/api/treg/tools', validate: (d) => Array.isArray(d) && d.length >= 4 },
     { method: 'GET', path: '/api/treg/calls', validate: (d) => Array.isArray(d) && d.length >= 2 },
+    { method: 'GET', path: '/api/brand', validate: (d) => d.brand && d.brand.id === 'brand-default' && d.brand.offerings.length >= 2 },
+    { method: 'GET', path: '/api/brand/sources', validate: (d) => Array.isArray(d.sources) && d.sources.length >= 2 },
   ];
 
   for (const ep of testEndpoints) {
@@ -95,6 +104,8 @@ async function main() {
     '/api/v1/sessions?verifyDocBacking=true',
     '/api/treg/tools?verifyDocBacking=true',
     '/api/treg/calls?verifyDocBacking=true',
+    '/api/brand?verifyDocBacking=true',
+    '/api/brand/sources?verifyDocBacking=true',
   ];
 
   for (const path of docCheckEndpoints) {
@@ -176,9 +187,103 @@ async function main() {
   }
   console.log(`PASS: mockClient.action treg:callTool returned callId ${actionResult.callId}`);
 
+  // 7. Test Brand Dynamic Endpoints, Compiler & MockClient
+  console.log('Testing Brand Dynamic Endpoints, Compiler & MockClient...');
+  const { buildBrandSystemPrompt, simulateOutbound, retrieveSourceRefs, PROMPT_VERSION } = await import('../lib/brand/index.ts');
+
+  // Test PUT /api/brand
+  const putBrandRes = await fetch(`${baseUrl}/api/brand`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identity: { tagline: 'Updated low-latency ranking tagline' },
+    }),
+  });
+  if (!putBrandRes.ok) throw new Error(`PUT /api/brand returned ${putBrandRes.status}`);
+  const putBrandData = await putBrandRes.json();
+  if (putBrandData.brand.identity.tagline !== 'Updated low-latency ranking tagline') {
+    throw new Error('PUT /api/brand failed to merge tagline');
+  }
+  console.log('PASS: PUT /api/brand updated brand tagline');
+
+  // Test POST /api/brand/intelligence
+  const intelRes = await fetch(`${baseUrl}/api/brand/intelligence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      competitors: ['nebius.com', 'cohere.com'],
+      selectedKeyword: 'cross-encoder reranking on nebius',
+    }),
+  });
+  if (!intelRes.ok) throw new Error(`POST /api/brand/intelligence returned ${intelRes.status}`);
+  const intelData = await intelRes.json();
+  if (!intelData.brand.intelligence.competitors.includes('nebius.com')) {
+    throw new Error('POST /api/brand/intelligence failed to append competitor');
+  }
+  console.log('PASS: POST /api/brand/intelligence appended competitor');
+
+  // Test POST /api/brand/index
+  const indexRes = await fetch(`${baseUrl}/api/brand/index`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      urls: ['https://listeningkit.com/benchmarks'],
+    }),
+  });
+  if (!indexRes.ok) throw new Error(`POST /api/brand/index returned ${indexRes.status}`);
+  const indexData = await indexRes.json();
+  if (!indexData.sources.some((s) => s.url === 'https://listeningkit.com/benchmarks')) {
+    throw new Error('POST /api/brand/index failed to register pending URL');
+  }
+  console.log('PASS: POST /api/brand/index indexed URL candidate');
+
+  // Test DELETE /api/brand/sources
+  const delSourceRes = await fetch(`${baseUrl}/api/brand/sources`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: 'https://listeningkit.com/benchmarks',
+    }),
+  });
+  if (!delSourceRes.ok) throw new Error(`DELETE /api/brand/sources returned ${delSourceRes.status}`);
+  const delSourceData = await delSourceRes.json();
+  if (delSourceData.sources.some((s) => s.url === 'https://listeningkit.com/benchmarks')) {
+    throw new Error('DELETE /api/brand/sources failed to remove URL');
+  }
+  console.log('PASS: DELETE /api/brand/sources removed URL');
+
+  // Test Brand System Prompt Compiler
+  const currentBrand = mockStore.getBrand();
+  const compiledPrompt = buildBrandSystemPrompt(currentBrand);
+  if (!compiledPrompt.includes('Voice: Friendly, plain-spoken local pro') || !compiledPrompt.includes('Services you can mention:')) {
+    throw new Error('Brand compiler buildBrandSystemPrompt failed');
+  }
+  console.log(`PASS: buildBrandSystemPrompt generated deterministic prompt (version ${PROMPT_VERSION})`);
+
+  // Test simulateOutbound
+  const simulated = simulateOutbound(currentBrand, 'reddit', 'can anyone help with boiler install?');
+  if (!simulated || !simulated.text) {
+    throw new Error('simulateOutbound returned empty reply');
+  }
+  console.log(`PASS: simulateOutbound generated reply on reddit: "${simulated.text.slice(0, 60)}..."`);
+
+  // Test retrieveSourceRefs
+  const refs = retrieveSourceRefs(currentBrand, 'cross-encoder scoring latency');
+  if (refs.length === 0) {
+    throw new Error('retrieveSourceRefs returned empty matches');
+  }
+  console.log(`PASS: retrieveSourceRefs retrieved ${refs.length} passage citation(s)`);
+
+  // Test MockClient brand methods
+  const clientBrandRes = await mockClient.query('brand:get', { verifyDocBacking: true });
+  if (!clientBrandRes._meta || clientBrandRes._meta.verified !== true || !clientBrandRes.data?.id) {
+    throw new Error('mockClient.query brand:get with verifyDocBacking failed');
+  }
+  console.log(`PASS: mockClient.query brand:get verified against ${clientBrandRes._meta.docPath}`);
+
   // Close server cleanly
   await new Promise((resolve) => server.close(resolve));
-  console.log('All mock route, doc backing, and Treg verification tests completed successfully.');
+  console.log('All mock route, doc backing, Treg, and Brand verification tests completed successfully.');
 }
 
 main().catch((err) => {

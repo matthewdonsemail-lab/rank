@@ -196,3 +196,18 @@ export interface TregExecuteResponse {
   at: number;
 }
 
+export type {
+  BrandEntity,
+  BrandIdentity,
+  BrandLocation,
+  BrandVoice,
+  BrandOffering,
+  BrandPage,
+  ChannelProfile,
+  BrandMemory,
+  BrandIntelligence,
+  CommunityPick,
+  Autoreply,
+  BrandChannel,
+} from "../lib/brand/types.ts";
+

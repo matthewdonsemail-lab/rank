@@ -1,0 +1,10 @@
+flowchart LR
+  EDIT[Voice edit<br/>on the Brand tab] --> COMPILER2[prompt vN+1]
+  COMPILER2 --> DRAFT2[future drafts]
+  DRAFT2 -.->|old drafts keep vN| HIST([history never rewrites])
+
+  REINDEX[POST /api/brand/index] --> MERGE[unseen URLs appended<br/>seen rows untouched]
+  FAIL[source failed] --> STAY[stays failed<br/>no retry path yet]
+  V1[v1 persisted rows] --> MIGRATE[migrate on load<br/>written back clean]
+  HAND[Gold examples<br/>curated by hand] --> COMPILER2
+  REVEAL2[Reveal picks] --> INTEL2[intelligence block]

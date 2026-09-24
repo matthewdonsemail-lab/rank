@@ -20,6 +20,9 @@ import { handleGetAgentMailMessages, docBacking as agentMailMessagesDoc } from "
 import { handleGetTregTools, docBacking as tregToolsDoc } from "./data/treg-tools.ts";
 import { handleGetTregCalls, docBacking as tregCallsDoc } from "./data/treg-calls.ts";
 import { handlePostTregExecute, docBacking as tregExecuteDoc } from "./data/treg-execute.ts";
+import { docBacking as brandDoc } from "./data/brand.ts";
+import { docBacking as brandSourcesDoc } from "./data/brand-sources.ts";
+import { docBacking as brandIntelDoc } from "./data/brand-intelligence.ts";
 import { mockStore } from "./store.ts";
 import { wrapWithDocBacking } from "./validator.ts";
 import type { RankInferenceRequest, TregExecuteRequest, DocBackingMetadata } from "./schema.ts";
@@ -241,7 +244,39 @@ export function createMockServer() {
         return respondWithDocCheck(res, 200, callResult, tregExecuteDoc, verifyDocBacking);
       }
 
-      // 11. Fallback 404
+      // 11. Brand Domain routes
+      if (pathname === "/api/brand" && req.method === "GET") {
+        return respondWithDocCheck(res, 200, { brand: mockStore.getBrand() }, brandDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/brand" && req.method === "PUT") {
+        const body = await parseJsonBody(req);
+        const updated = mockStore.upsertBrand(body);
+        return respondWithDocCheck(res, 200, { brand: updated }, brandDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/brand" && req.method === "DELETE") {
+        mockStore.clearBrand();
+        return respondWithDocCheck(res, 200, { brand: null }, brandDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/brand/intelligence" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const updated = mockStore.appendBrandIntelligence(body);
+        return respondWithDocCheck(res, 200, { brand: updated }, brandIntelDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/brand/sources" && req.method === "GET") {
+        return respondWithDocCheck(res, 200, { sources: mockStore.getBrandSources() }, brandSourcesDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/brand/index" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const result = mockStore.indexBrandSources(body);
+        return respondWithDocCheck(res, 200, result, brandSourcesDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/brand/sources" && req.method === "DELETE") {
+        const body = await parseJsonBody(req);
+        const result = mockStore.removeBrandSource(String(body.url || ""));
+        return respondWithDocCheck(res, 200, result, brandSourcesDoc, verifyDocBacking);
+      }
+
+      // 12. Fallback 404
       return sendJson(res, 404, {
         error: "Route not found",
         pathname,
@@ -265,6 +300,10 @@ export function createMockServer() {
           "/api/treg/tools",
           "/api/treg/calls",
           "/api/treg/call",
+          "/api/brand",
+          "/api/brand/intelligence",
+          "/api/brand/sources",
+          "/api/brand/index",
         ],
       });
     } catch (err: unknown) {

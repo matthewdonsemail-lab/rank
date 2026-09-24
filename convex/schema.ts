@@ -55,4 +55,19 @@ export default defineSchema({
     avgLatencyMs: v.number(),
     completedAt: v.number(),
   }).index("by_workspace", ["workspaceId", "completedAt"]),
+
+  brands: defineTable({
+    owner: v.string(),
+    sourceUrl: v.string(),
+    name: v.string(),
+    tagline: v.string(),
+    offerings: v.array(v.object({ name: v.string(), detail: v.string() })),
+    tone: v.optional(v.string()),
+    formality: v.optional(v.union(v.literal("casual"), v.literal("professional"), v.literal("formal"))),
+    locationLabel: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
+    fetchedAt: v.number(),
+    lastAttemptAt: v.number(),
+    lastMapAt: v.optional(v.number()),
+  }).index("by_owner", ["owner"]),
 });

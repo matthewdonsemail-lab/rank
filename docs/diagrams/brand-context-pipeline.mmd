@@ -1,0 +1,19 @@
+flowchart TD
+  URL[Website URL] --> EXTRACT[extractBrandFromUrl]
+  EXTRACT --> IDENT[identity<br/>name, site, tagline]
+  URL --> SITEMAP[sitemap]
+  SITEMAP --> INDEX[POST /api/brand/index<br/>appends unseen URLs, skips seen]
+  INDEX --> SOURCES[sources<br/>pages: url, title, text, status]
+  REVEAL[Onboarding reveal] --> INTEL[intelligence<br/>keyword, competitors, communities]
+  EDITS[Brand edits] --> VOICE[voice<br/>tone, formality, rules, examples]
+  EDITS --> OFF[offerings<br/>name + detail]
+  EDITS --> LOC[location<br/>label, pinpoint, radius]
+
+  IDENT & SOURCES & INTEL & VOICE & OFF & LOC --> ENTITY([BrandEntity<br/>one record])
+
+  ENTITY --> COMPILER[buildBrandSystemPrompt<br/>v2, deterministic]
+  COMPILER --> CTX[buildReplyContext<br/>prompt + version + sourceRefs]
+  SOURCES --> RETR[retrieveSourceRefs<br/>keyword overlap passages]
+  RETR --> CTX
+  CTX --> DRAFT[draftReply<br/>cites url + excerpt]
+  CTX -. live target .-> AGENT[Convex agent<br/>instructions + RAG messages]

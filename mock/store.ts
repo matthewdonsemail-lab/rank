@@ -14,6 +14,8 @@ import type {
   AgentMailMessage,
   TregTool,
   TregCallReceipt,
+  BrandEntity,
+  BrandPage,
 } from "./schema.ts";
 
 import { mockAuthUserData } from "./data/auth-user.ts";
@@ -31,6 +33,9 @@ import { mockAgentMailThreadsData } from "./data/agentmail-threads.ts";
 import { mockAgentMailMessagesData } from "./data/agentmail-messages.ts";
 import { mockTregToolsData } from "./data/treg-tools.ts";
 import { mockTregCallsData } from "./data/treg-calls.ts";
+import { mockBrandData, handlePutBrand } from "./data/brand.ts";
+import { handlePostBrandIndex, handleDeleteBrandSource } from "./data/brand-sources.ts";
+import { handlePostBrandIntelligence, type BrandIntelligenceInput } from "./data/brand-intelligence.ts";
 
 /**
  * In-memory relational store maintaining foreign key relationships across
@@ -52,6 +57,7 @@ export class MockStore {
   public agentMailMessages: AgentMailMessage[] = mockAgentMailMessagesData.map((m) => ({ ...m }));
   public tregTools: TregTool[] = mockTregToolsData.map((t) => ({ ...t }));
   public tregCalls: TregCallReceipt[] = mockTregCallsData.map((c) => ({ ...c }));
+  public brand: BrandEntity | null = JSON.parse(JSON.stringify(mockBrandData));
 
   // Query helpers by relation
   public getWorkspaceBySlug(slug: string): Workspace | undefined {
@@ -146,6 +152,43 @@ export class MockStore {
 
   public insertTregCall(call: TregCallReceipt) {
     this.tregCalls.unshift(call);
+  }
+
+  // Brand entity management
+  public getBrand(): BrandEntity | null {
+    return this.brand;
+  }
+
+  public upsertBrand(patch: Partial<BrandEntity>): BrandEntity {
+    const { brand } = handlePutBrand(patch, this.brand);
+    this.brand = brand;
+    return brand;
+  }
+
+  public appendBrandIntelligence(input: BrandIntelligenceInput): BrandEntity {
+    const { brand } = handlePostBrandIntelligence(input, this.brand);
+    this.brand = brand;
+    return brand;
+  }
+
+  public getBrandSources(): BrandPage[] {
+    return this.brand?.sources ?? [];
+  }
+
+  public indexBrandSources(input?: { urls?: string[]; sitemap?: boolean }): { brand: BrandEntity; sources: BrandPage[] } {
+    const res = handlePostBrandIndex(input ?? {}, this.brand);
+    this.brand = res.brand;
+    return res;
+  }
+
+  public removeBrandSource(url: string): { brand: BrandEntity; sources: BrandPage[] } {
+    const res = handleDeleteBrandSource(url, this.brand);
+    this.brand = res.brand;
+    return res;
+  }
+
+  public clearBrand(): void {
+    this.brand = null;
   }
 }
 
