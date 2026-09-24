@@ -1,9 +1,17 @@
-import type { AgentMailThread } from "../schema.ts";
+import type { AgentMailThread, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/agentmail/threads
  * Description: Retrieves email conversation threads for an AgentMail inbox.
+ * Backed by authoritative documentation in docs/convex/components/agentmail/README.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/convex/components/agentmail/README.md",
+  specSection: "Conversations & Thread Tracking",
+  specUrl: "https://agentmail.to/docs/threads",
+  requiredFields: ["id", "inboxId", "subject", "messageCount"],
+  lastVerified: "2026-09-25",
+};
 export const mockAgentMailThreadsData: AgentMailThread[] = [
   {
     id: "mth_rank_01",

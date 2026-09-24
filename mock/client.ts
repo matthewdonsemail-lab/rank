@@ -1,6 +1,21 @@
 import { mockStore } from "./store.ts";
-import { handlePostRankInference } from "./data/rank-inference.ts";
-import type { RankInferenceRequest } from "./schema.ts";
+import { handlePostRankInference, docBacking as rankDoc } from "./data/rank-inference.ts";
+import { handlePostTregExecute, docBacking as tregExecDoc } from "./data/treg-execute.ts";
+import { docBacking as workspacesDoc } from "./data/workspaces.ts";
+import { docBacking as apiKeysDoc } from "./data/api-keys.ts";
+import { docBacking as rankSessionsDoc } from "./data/rank-sessions.ts";
+import { docBacking as candidatesDoc } from "./data/candidates.ts";
+import { docBacking as receiptsDoc } from "./data/receipts.ts";
+import { docBacking as benchmarkRunsDoc } from "./data/benchmark-runs.ts";
+import { docBacking as agentThreadsDoc } from "./data/agent-threads.ts";
+import { docBacking as agentMessagesDoc } from "./data/agent-messages.ts";
+import { docBacking as agentMailInboxesDoc } from "./data/agentmail-inboxes.ts";
+import { docBacking as agentMailThreadsDoc } from "./data/agentmail-threads.ts";
+import { docBacking as agentMailMessagesDoc } from "./data/agentmail-messages.ts";
+import { docBacking as tregToolsDoc } from "./data/treg-tools.ts";
+import { docBacking as tregCallsDoc } from "./data/treg-calls.ts";
+import { wrapWithDocBacking } from "./validator.ts";
+import type { RankInferenceRequest, TregExecuteRequest, DocBackingMetadata } from "./schema.ts";
 
 /**
  * Drop-in mock client bridge emulating Convex query, mutation, and action interfaces.
@@ -11,50 +26,95 @@ export class ConvexMockClient {
    * Emulates ctx.db.query or convexClient.query
    */
   public async query(endpoint: string, args: Record<string, unknown> = {}): Promise<unknown> {
+    const verifyDoc = Boolean(args.verifyDocBacking || args.backedByDoc);
+    let result: unknown;
+    let docMeta: DocBackingMetadata | null = null;
+
     switch (endpoint) {
       case "workspaces:list":
       case "workspaces:get":
-        return mockStore.workspaces;
+        result = mockStore.workspaces;
+        docMeta = workspacesDoc;
+        break;
 
       case "workspaces:getBySlug":
-        return mockStore.getWorkspaceBySlug(String(args.slug || ""));
+        result = mockStore.getWorkspaceBySlug(String(args.slug || ""));
+        docMeta = workspacesDoc;
+        break;
 
       case "apiKeys:list":
-        return mockStore.getApiKeysByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        result = mockStore.getApiKeysByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        docMeta = apiKeysDoc;
+        break;
 
       case "rankSessions:list":
-        return mockStore.getRankSessionsByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        result = mockStore.getRankSessionsByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        docMeta = rankSessionsDoc;
+        break;
 
       case "rankSessions:get":
-        return mockStore.getFullSession(String(args.sessionId || ""));
+        result = mockStore.getFullSession(String(args.sessionId || ""));
+        docMeta = rankSessionsDoc;
+        break;
 
       case "candidates:listBySession":
-        return mockStore.getCandidatesBySession(String(args.sessionId || ""));
+        result = mockStore.getCandidatesBySession(String(args.sessionId || ""));
+        docMeta = candidatesDoc;
+        break;
 
       case "receipts:getBySession":
-        return mockStore.getReceiptBySession(String(args.sessionId || ""));
+        result = mockStore.getReceiptBySession(String(args.sessionId || ""));
+        docMeta = receiptsDoc;
+        break;
 
       case "benchmarkRuns:list":
-        return mockStore.getBenchmarkRunsByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        result = mockStore.getBenchmarkRunsByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        docMeta = benchmarkRunsDoc;
+        break;
 
       case "agent:listThreads":
-        return mockStore.getAgentThreadsByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        result = mockStore.getAgentThreadsByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        docMeta = agentThreadsDoc;
+        break;
 
       case "agent:listMessages":
-        return mockStore.getAgentMessagesByThread(String(args.threadId || ""));
+        result = mockStore.getAgentMessagesByThread(String(args.threadId || ""));
+        docMeta = agentMessagesDoc;
+        break;
 
       case "agentmail:listInboxes":
-        return mockStore.getAgentMailInboxesByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        result = mockStore.getAgentMailInboxesByWorkspace(String(args.workspaceId || "ws_rank_01"));
+        docMeta = agentMailInboxesDoc;
+        break;
 
       case "agentmail:listThreads":
-        return mockStore.getAgentMailThreadsByInbox(String(args.inboxId || ""));
+        result = mockStore.getAgentMailThreadsByInbox(String(args.inboxId || ""));
+        docMeta = agentMailThreadsDoc;
+        break;
 
       case "agentmail:listMessages":
-        return mockStore.getAgentMailMessagesByThread(String(args.threadId || ""));
+        result = mockStore.getAgentMailMessagesByThread(String(args.threadId || ""));
+        docMeta = agentMailMessagesDoc;
+        break;
+
+      case "treg:listTools":
+        result = mockStore.getTregTools(args as { category?: string; provider?: string });
+        docMeta = tregToolsDoc;
+        break;
+
+      case "treg:listCalls":
+        result = mockStore.getTregCalls(args.ownerHash ? String(args.ownerHash) : undefined);
+        docMeta = tregCallsDoc;
+        break;
 
       default:
         throw new Error(`Unknown mock query endpoint: ${endpoint}`);
     }
+
+    if (verifyDoc && docMeta) {
+      return wrapWithDocBacking(result, docMeta);
+    }
+    return result;
   }
 
   /**
@@ -97,13 +157,27 @@ export class ConvexMockClient {
   }
 
   /**
-   * Emulates action calls such as AI reranker or agent execution
+   * Emulates action calls such as AI reranker, agent execution, or Treg tool call
    */
   public async action(endpoint: string, args: Record<string, unknown> = {}): Promise<unknown> {
     switch (endpoint) {
       case "rank:execute": {
         const req = args as unknown as RankInferenceRequest;
         return handlePostRankInference(req);
+      }
+
+      case "treg:callTool": {
+        const req = args as unknown as TregExecuteRequest;
+        const callResult = handlePostTregExecute(req);
+        mockStore.insertTregCall({
+          callId: callResult.callId,
+          ownerHash: req.owner ? `hash_${req.owner.slice(0, 8)}` : "hash_anonymous",
+          endpoint: callResult.endpoint,
+          costMicro: callResult.costMicro,
+          servedVia: callResult.servedVia,
+          at: callResult.at,
+        });
+        return callResult;
       }
 
       case "agent:runTurn": {

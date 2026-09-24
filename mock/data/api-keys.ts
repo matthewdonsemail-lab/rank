@@ -1,9 +1,17 @@
-import type { ApiKey } from "../schema.ts";
+import type { ApiKey, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/keys
  * Description: Retrieves provisioned hashed API keys for a workspace.
+ * Backed by authoritative documentation in docs/api-and-mcp.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/api-and-mcp.md",
+  specSection: "Authentication & Scopes",
+  specUrl: "https://rank.listeningkit.com/docs/api#auth",
+  requiredFields: ["id", "workspaceId", "hashedKey", "label", "scopes"],
+  lastVerified: "2026-09-25",
+};
 export const mockApiKeysData: ApiKey[] = [
   {
     id: "key_rank_01",

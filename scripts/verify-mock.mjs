@@ -1,12 +1,12 @@
 import http from 'node:http';
 
 async function main() {
-  console.log('Testing Mock Architecture & API Routes...');
+  console.log('Testing Mock Architecture, Doc Backing Validation & Treg Routes...');
 
-  // Dynamically import compiled/stripped mock server and client
   const { createMockServer } = await import('../mock/server.ts');
   const { mockClient } = await import('../mock/client.ts');
   const { mockStore } = await import('../mock/store.ts');
+  const { validateFixtureDocBacking } = await import('../mock/validator.ts');
 
   // 1. Verify in-memory relational store referential integrity
   console.log('Verifying relational store integrity...');
@@ -23,6 +23,8 @@ async function main() {
   const mailInbox = mockStore.agentMailInboxes[0];
   const mailThread = mockStore.agentMailThreads[0];
   const mailMessage = mockStore.agentMailMessages[0];
+  const tregTool = mockStore.tregTools[0];
+  const tregCall = mockStore.tregCalls[0];
 
   if (org.ownerId !== user.id) throw new Error('Referential mismatch: org.ownerId != user.id');
   if (ws.organizationId !== org.id) throw new Error('Referential mismatch: ws.organizationId != org.id');
@@ -40,8 +42,10 @@ async function main() {
   if (mailInbox.workspaceId !== ws.id) throw new Error('Referential mismatch: mailInbox.workspaceId != ws.id');
   if (mailThread.inboxId !== mailInbox.id) throw new Error('Referential mismatch: mailThread.inboxId != mailInbox.id');
   if (mailMessage.threadId !== mailThread.id) throw new Error('Referential mismatch: mailMessage.threadId != mailThread.id');
+  if (!tregTool.endpoint) throw new Error('Treg tool missing endpoint');
+  if (!tregCall.callId) throw new Error('Treg call missing callId');
 
-  console.log('Referential integrity checks passed across all 12 relational models.');
+  console.log('Referential integrity checks passed across all relational models.');
 
   // 2. Start mock server on ephemeral port
   const TEST_PORT = 3999;
@@ -67,6 +71,8 @@ async function main() {
     { method: 'GET', path: '/api/agentmail/inboxes?workspaceId=ws_rank_01', validate: (d) => Array.isArray(d) && d.length >= 1 },
     { method: 'GET', path: '/api/agentmail/threads?inboxId=inbox_rank_01', validate: (d) => Array.isArray(d) && d.length >= 2 },
     { method: 'GET', path: '/api/agentmail/messages?threadId=mth_rank_01', validate: (d) => Array.isArray(d) && d.length >= 2 },
+    { method: 'GET', path: '/api/treg/tools', validate: (d) => Array.isArray(d) && d.length >= 4 },
+    { method: 'GET', path: '/api/treg/calls', validate: (d) => Array.isArray(d) && d.length >= 2 },
   ];
 
   for (const ep of testEndpoints) {
@@ -81,7 +87,30 @@ async function main() {
     console.log(`PASS: ${ep.method} ${ep.path}`);
   }
 
-  // 3. Test POST /api/v1/rank dynamic inference
+  // 3. Test documentation backing validation argument (?verifyDocBacking=true)
+  console.log('Testing doc backing validation argument (?verifyDocBacking=true)...');
+  const docCheckEndpoints = [
+    '/api/auth/user?verifyDocBacking=true',
+    '/api/workspaces?verifyDocBacking=true',
+    '/api/v1/sessions?verifyDocBacking=true',
+    '/api/treg/tools?verifyDocBacking=true',
+    '/api/treg/calls?verifyDocBacking=true',
+  ];
+
+  for (const path of docCheckEndpoints) {
+    const res = await fetch(`${baseUrl}${path}`);
+    if (!res.ok) throw new Error(`Doc check endpoint ${path} returned ${res.status}`);
+    const json = await res.json();
+    if (!json._meta || json._meta.docBacked !== true) {
+      throw new Error(`Endpoint ${path} did not return _meta.docBacked envelope`);
+    }
+    if (json._meta.verified !== true) {
+      throw new Error(`Endpoint ${path} failed doc verification: ${json._meta.docPath}`);
+    }
+    console.log(`PASS: ${path} verified against ${json._meta.docPath} (${json._meta.specSection})`);
+  }
+
+  // 4. Test dynamic POST /api/v1/rank
   console.log('Testing dynamic POST /api/v1/rank...');
   const rankRes = await fetch(`${baseUrl}/api/v1/rank`, {
     method: 'POST',
@@ -100,32 +129,56 @@ async function main() {
   if (!rankData.sessionId || rankData.results.length !== 2) {
     throw new Error('Invalid rank inference response shape');
   }
-  // c1 should rank higher than c2 because of token matches
   if (rankData.results[0].id !== 'c1') {
     throw new Error('Ranking heuristic failed: expected c1 to rank 1');
   }
-  console.log(`PASS: POST /api/v1/rank returned session ${rankData.sessionId} (rank 1: ${rankData.results[0].id} score: ${rankData.results[0].score})`);
+  console.log(`PASS: POST /api/v1/rank returned session ${rankData.sessionId}`);
 
-  // 4. Test Mock Client bridge
-  console.log('Testing ConvexMockClient interface...');
-  const queryResult = await mockClient.query('rankSessions:list', { workspaceId: 'ws_rank_01' });
-  if (!Array.isArray(queryResult) || queryResult.length === 0) {
-    throw new Error('mockClient.query failed');
-  }
-  console.log('PASS: mockClient.query rankSessions:list');
-
-  const actionResult = await mockClient.action('agent:runTurn', {
-    threadId: 'ath_rank_01',
-    prompt: 'Summarize candidate rankings',
+  // 5. Test POST /api/treg/call tool execution
+  console.log('Testing POST /api/treg/call tool execution...');
+  const initialCallCount = mockStore.tregCalls.length;
+  const tregRes = await fetch(`${baseUrl}/api/treg/call`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      owner: 'user_test_42',
+      endpoint: 'spyfu.google.domain.competitors',
+      params: { domain: 'listeningkit.com' },
+      maxCostUsd: 0.01,
+    }),
   });
-  if (!actionResult || !actionResult.content) {
-    throw new Error('mockClient.action failed');
+  if (!tregRes.ok) throw new Error(`POST /api/treg/call returned ${tregRes.status}`);
+  const tregExecData = await tregRes.json();
+  if (!tregExecData.callId || !tregExecData.result || tregExecData.costMicro !== 200) {
+    throw new Error('Invalid Treg tool execution response');
   }
-  console.log('PASS: mockClient.action agent:runTurn');
+  if (mockStore.tregCalls.length !== initialCallCount + 1) {
+    throw new Error('Treg call receipt was not recorded in mockStore');
+  }
+  console.log(`PASS: POST /api/treg/call executed ${tregExecData.endpoint} (callId: ${tregExecData.callId}, cost: ${tregExecData.costMicro} micro-usd)`);
+
+  // 6. Test ConvexMockClient interface with verifyDocBacking
+  console.log('Testing ConvexMockClient interface with verifyDocBacking: true...');
+  const queryResult = await mockClient.query('treg:listTools', { verifyDocBacking: true });
+  if (!queryResult._meta || queryResult._meta.verified !== true || !Array.isArray(queryResult.data)) {
+    throw new Error('mockClient.query with verifyDocBacking failed');
+  }
+  console.log(`PASS: mockClient.query treg:listTools verified against ${queryResult._meta.docPath}`);
+
+  const actionResult = await mockClient.action('treg:callTool', {
+    owner: 'user_agent_turn',
+    endpoint: 'brave.web.search',
+    params: { query: 'Nebius cross-encoder ranking' },
+    maxCostUsd: 0.05,
+  });
+  if (!actionResult || !actionResult.callId || actionResult.costMicro !== 800) {
+    throw new Error('mockClient.action treg:callTool failed');
+  }
+  console.log(`PASS: mockClient.action treg:callTool returned callId ${actionResult.callId}`);
 
   // Close server cleanly
   await new Promise((resolve) => server.close(resolve));
-  console.log('All mock route and store verification tests completed successfully.');
+  console.log('All mock route, doc backing, and Treg verification tests completed successfully.');
 }
 
 main().catch((err) => {

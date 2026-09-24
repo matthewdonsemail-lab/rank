@@ -12,6 +12,8 @@ import type {
   AgentMailInbox,
   AgentMailThread,
   AgentMailMessage,
+  TregTool,
+  TregCallReceipt,
 } from "./schema.ts";
 
 import { mockAuthUserData } from "./data/auth-user.ts";
@@ -27,6 +29,8 @@ import { mockAgentMessagesData } from "./data/agent-messages.ts";
 import { mockAgentMailInboxesData } from "./data/agentmail-inboxes.ts";
 import { mockAgentMailThreadsData } from "./data/agentmail-threads.ts";
 import { mockAgentMailMessagesData } from "./data/agentmail-messages.ts";
+import { mockTregToolsData } from "./data/treg-tools.ts";
+import { mockTregCallsData } from "./data/treg-calls.ts";
 
 /**
  * In-memory relational store maintaining foreign key relationships across
@@ -46,6 +50,8 @@ export class MockStore {
   public agentMailInboxes: AgentMailInbox[] = mockAgentMailInboxesData.map((i) => ({ ...i }));
   public agentMailThreads: AgentMailThread[] = mockAgentMailThreadsData.map((t) => ({ ...t }));
   public agentMailMessages: AgentMailMessage[] = mockAgentMailMessagesData.map((m) => ({ ...m }));
+  public tregTools: TregTool[] = mockTregToolsData.map((t) => ({ ...t }));
+  public tregCalls: TregCallReceipt[] = mockTregCallsData.map((c) => ({ ...c }));
 
   // Query helpers by relation
   public getWorkspaceBySlug(slug: string): Workspace | undefined {
@@ -123,6 +129,23 @@ export class MockStore {
     this.rankSessions.unshift(session);
     this.candidates.push(...candidates);
     this.receipts.push(receipt);
+  }
+
+  // Treg developer tools helpers
+  public getTregTools(filter?: { category?: string; provider?: string }): TregTool[] {
+    let list = this.tregTools;
+    if (filter?.category) list = list.filter((t) => t.category === filter.category);
+    if (filter?.provider) list = list.filter((t) => t.provider.toLowerCase() === filter.provider?.toLowerCase());
+    return list;
+  }
+
+  public getTregCalls(ownerHash?: string): TregCallReceipt[] {
+    if (ownerHash) return this.tregCalls.filter((c) => c.ownerHash === ownerHash);
+    return this.tregCalls;
+  }
+
+  public insertTregCall(call: TregCallReceipt) {
+    this.tregCalls.unshift(call);
   }
 }
 

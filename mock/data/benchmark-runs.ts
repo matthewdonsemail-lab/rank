@@ -1,9 +1,17 @@
-import type { BenchmarkRun } from "../schema.ts";
+import type { BenchmarkRun, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/benchmarks
  * Description: Retrieves benchmark evaluation runs (NDCG@10, MRR, latency).
+ * Backed by authoritative documentation in docs/typesafe/confidence.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/typesafe/confidence.md",
+  specSection: "Deterministic Evaluation & Metrics",
+  specUrl: "https://typesafe.ai/docs/confidence",
+  requiredFields: ["id", "workspaceId", "dataset", "ndcg10", "mrr", "avgLatencyMs", "completedAt"],
+  lastVerified: "2026-09-25",
+};
 export const mockBenchmarkRunsData: BenchmarkRun[] = [
   {
     id: "bm_rank_01",

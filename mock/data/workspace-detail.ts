@@ -1,4 +1,4 @@
-import type { Workspace } from "../schema.ts";
+import type { Workspace, DocBackingMetadata } from "../schema.ts";
 import { mockWorkspacesData } from "./workspaces.ts";
 
 export interface WorkspaceDetail extends Workspace {
@@ -13,7 +13,15 @@ export interface WorkspaceDetail extends Workspace {
 /**
  * Route: GET /api/workspaces/:slug
  * Description: Retrieves workspace detail and telemetry aggregates by slug.
+ * Backed by authoritative documentation in docs/architecture.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/architecture.md",
+  specSection: "Data Model & Isolation Boundary",
+  specUrl: "https://rank.listeningkit.com/docs/architecture",
+  requiredFields: ["id", "name", "slug", "plan", "stats"],
+  lastVerified: "2026-09-25",
+};
 export const mockWorkspaceDetails: Record<string, WorkspaceDetail> = {
   "nebius-core-prod": {
     ...mockWorkspacesData[0],

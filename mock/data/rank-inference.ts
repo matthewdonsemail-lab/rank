@@ -1,10 +1,18 @@
-import type { RankInferenceRequest, RankInferenceResponse } from "../schema.ts";
+import type { RankInferenceRequest, RankInferenceResponse, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: POST /api/v1/rank
  * Description: Simulates Nebius BAAI/bge-reranker-v2-m3 cross-encoder inference.
  * Calculates deterministic mock relevance scores based on semantic token overlap.
+ * Backed by authoritative documentation in docs/nebius/llms.txt.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/nebius/llms.txt",
+  specSection: "Inference Cross-Encoder API",
+  specUrl: "https://docs.nebius.ai/studio/inference/models/reranker",
+  requiredFields: ["sessionId", "model", "query", "latencyMs", "results"],
+  lastVerified: "2026-09-25",
+};
 export function handlePostRankInference(body: RankInferenceRequest): RankInferenceResponse {
   const queryTokens = (body.query || "")
     .toLowerCase()

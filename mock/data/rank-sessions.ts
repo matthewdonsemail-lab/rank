@@ -1,9 +1,17 @@
-import type { RankSession } from "../schema.ts";
+import type { RankSession, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/v1/sessions
  * Description: Retrieves list of past ranking sessions for a workspace.
+ * Backed by authoritative documentation in docs/nebius/llms.txt.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/nebius/llms.txt",
+  specSection: "Reranking & Inference APIs",
+  specUrl: "https://docs.nebius.ai/studio/inference/models/reranker",
+  requiredFields: ["id", "workspaceId", "query", "strategy", "model", "candidateCount", "latencyMs"],
+  lastVerified: "2026-09-25",
+};
 export const mockRankSessionsData: RankSession[] = [
   {
     id: "rs_rank_01",

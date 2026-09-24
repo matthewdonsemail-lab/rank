@@ -1,9 +1,17 @@
-import type { AgentMessage } from "../schema.ts";
+import type { AgentMessage, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/agent/messages
  * Description: Retrieves conversation turns and tool calls for an agent thread.
+ * Backed by authoritative documentation in docs/convex/components/agent/README.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/convex/components/agent/README.md",
+  specSection: "Tool Calling & Turns",
+  specUrl: "https://github.com/get-convex/agent",
+  requiredFields: ["id", "threadId", "role", "content"],
+  lastVerified: "2026-09-25",
+};
 export const mockAgentMessagesData: AgentMessage[] = [
   {
     id: "amsg_rank_01",

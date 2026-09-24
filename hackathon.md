@@ -9,9 +9,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T04:40:00Z
+- **Last updated:** 2026-09-25T04:55:00Z
 
 ## Log
+
+### 2026-09-25 - treg convex component installation and mock doc backing validation
+Installed and mounted the production `@listeningkit/treg` Convex component (v0.1.3) into `convex/convex.config.ts` alongside `@convex-dev/agent` and `@agentmail/convex`, and upgraded `convex` to `^1.46.0`. Authored complete authoritative component documentation under `docs/convex/components/treg/` (`README.md`, `tools.md`, `spend-ledger.md`) covering tool catalog routing, reserve cost ceilings (`maxCostUsd`), and encapsulated spend receipts. Scaffolded the domain wrapper library in `lib/convex/treg/` adhering to `lib/{library}/{domainname}/helpers/` conventions, and exposed host application action `callTool` and query `getUsage` in `convex/treg.ts`. Implemented the documentation backing validation engine (`mock/validator.ts`) allowing any caller to pass `?verifyDocBacking=true` or `verifyDocBacking: true` to confirm mock data is succinct, schema-conformant, and verified against physical documentation files on disk. Added Treg mock fixtures for `/api/treg/tools`, `/api/treg/calls`, and `/api/treg/call` and verified 100% pass across all 19 endpoints in `scripts/verify-mock.mjs`.
 
 ### 2026-09-25 - relational mock architecture and clerk documentation pull
 Designed and implemented a comprehensive, in-memory relational mock architecture under `mock/` mirroring the complete Convex backend schema (`workspaces`, `apiKeys`, `rankSessions`, `candidates`, `receipts`, `benchmarkRuns`), Convex Agent component (`agentThreads`, `agentMessages`), Convex AgentMail component (`mailInboxes`, `mailThreads`, `mailMessages`), and Clerk authentication identity (`users`, `organizations`). Built 16 modular route fixture files under `mock/data/` enforcing the "one piece of data per route" standard, an in-memory relational store with referential querying in `mock/store.ts`, a zero-dependency standalone Node HTTP server in `mock/server.ts` with CORS and dynamic cross-encoder scoring, and a drop-in Convex mock client bridge in `mock/client.ts`. Pulled the complete Clerk documentation suite (17 markdown files including full llms.txt index, backend verification, Convex integration, and Next.js quickstarts) into `docs/clerk/` with `.gitignore` coverage. Added automated validation script `scripts/verify-mock.mjs` and verified zero errors across all pre-push gates.

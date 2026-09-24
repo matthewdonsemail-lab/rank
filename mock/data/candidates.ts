@@ -1,9 +1,17 @@
-import type { Candidate } from "../schema.ts";
+import type { Candidate, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/v1/sessions/:id/candidates
  * Description: Retrieves ordered ranked candidates for a specific session.
+ * Backed by authoritative documentation in docs/nebius/llms.txt.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/nebius/llms.txt",
+  specSection: "Candidate Passage Scoring",
+  specUrl: "https://docs.nebius.ai/studio/inference/models/reranker",
+  requiredFields: ["id", "sessionId", "text", "rerankScore", "finalRank"],
+  lastVerified: "2026-09-25",
+};
 export const mockCandidatesData: Candidate[] = [
   // Candidates for session rs_rank_01
   {

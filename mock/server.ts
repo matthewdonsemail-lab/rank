@@ -1,24 +1,28 @@
 import http from "node:http";
 import { URL } from "node:url";
 
-import { handleGetAuthUser } from "./data/auth-user.ts";
-import { handleGetAuthOrganization } from "./data/auth-organization.ts";
-import { handleGetWorkspaces } from "./data/workspaces.ts";
-import { handleGetWorkspaceDetail } from "./data/workspace-detail.ts";
-import { handleGetApiKeys } from "./data/api-keys.ts";
-import { handleGetRankSessions } from "./data/rank-sessions.ts";
-import { handleGetRankSessionDetail } from "./data/rank-session-detail.ts";
-import { handleGetCandidates } from "./data/candidates.ts";
-import { handleGetReceipts } from "./data/receipts.ts";
-import { handleGetBenchmarkRuns } from "./data/benchmark-runs.ts";
-import { handlePostRankInference } from "./data/rank-inference.ts";
-import { handleGetAgentThreads } from "./data/agent-threads.ts";
-import { handleGetAgentMessages } from "./data/agent-messages.ts";
-import { handleGetAgentMailInboxes } from "./data/agentmail-inboxes.ts";
-import { handleGetAgentMailThreads } from "./data/agentmail-threads.ts";
-import { handleGetAgentMailMessages } from "./data/agentmail-messages.ts";
+import { handleGetAuthUser, docBacking as authUserDoc } from "./data/auth-user.ts";
+import { handleGetAuthOrganization, docBacking as authOrgDoc } from "./data/auth-organization.ts";
+import { handleGetWorkspaces, docBacking as workspacesDoc } from "./data/workspaces.ts";
+import { handleGetWorkspaceDetail, docBacking as workspaceDetailDoc } from "./data/workspace-detail.ts";
+import { handleGetApiKeys, docBacking as apiKeysDoc } from "./data/api-keys.ts";
+import { handleGetRankSessions, docBacking as rankSessionsDoc } from "./data/rank-sessions.ts";
+import { handleGetRankSessionDetail, docBacking as rankSessionDetailDoc } from "./data/rank-session-detail.ts";
+import { handleGetCandidates, docBacking as candidatesDoc } from "./data/candidates.ts";
+import { handleGetReceipts, docBacking as receiptsDoc } from "./data/receipts.ts";
+import { handleGetBenchmarkRuns, docBacking as benchmarkRunsDoc } from "./data/benchmark-runs.ts";
+import { handlePostRankInference, docBacking as rankInferenceDoc } from "./data/rank-inference.ts";
+import { handleGetAgentThreads, docBacking as agentThreadsDoc } from "./data/agent-threads.ts";
+import { handleGetAgentMessages, docBacking as agentMessagesDoc } from "./data/agent-messages.ts";
+import { handleGetAgentMailInboxes, docBacking as agentMailInboxesDoc } from "./data/agentmail-inboxes.ts";
+import { handleGetAgentMailThreads, docBacking as agentMailThreadsDoc } from "./data/agentmail-threads.ts";
+import { handleGetAgentMailMessages, docBacking as agentMailMessagesDoc } from "./data/agentmail-messages.ts";
+import { handleGetTregTools, docBacking as tregToolsDoc } from "./data/treg-tools.ts";
+import { handleGetTregCalls, docBacking as tregCallsDoc } from "./data/treg-calls.ts";
+import { handlePostTregExecute, docBacking as tregExecuteDoc } from "./data/treg-execute.ts";
 import { mockStore } from "./store.ts";
-import type { RankInferenceRequest } from "./schema.ts";
+import { wrapWithDocBacking } from "./validator.ts";
+import type { RankInferenceRequest, TregExecuteRequest, DocBackingMetadata } from "./schema.ts";
 
 const DEFAULT_PORT = 3002;
 
@@ -27,7 +31,7 @@ function sendJson(res: http.ServerResponse, statusCode: number, data: unknown) {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Verify-Doc-Backing",
   });
   res.end(JSON.stringify(data, null, 2));
 }
@@ -53,13 +57,27 @@ function parseJsonBody(req: http.IncomingMessage): Promise<Record<string, unknow
   });
 }
 
+function respondWithDocCheck(
+  res: http.ServerResponse,
+  statusCode: number,
+  data: unknown,
+  metadata: DocBackingMetadata,
+  verifyDocBacking: boolean
+) {
+  if (verifyDocBacking) {
+    const wrapped = wrapWithDocBacking(data, metadata);
+    return sendJson(res, statusCode, wrapped);
+  }
+  return sendJson(res, statusCode, data);
+}
+
 export function createMockServer() {
   return http.createServer(async (req, res) => {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Verify-Doc-Backing",
       });
       res.end();
       return;
@@ -69,6 +87,10 @@ export function createMockServer() {
     const url = new URL(req.url || "/", `http://${host}`);
     const pathname = url.pathname;
     const query = Object.fromEntries(url.searchParams.entries());
+    const verifyDocBacking =
+      query.verifyDocBacking === "true" ||
+      query.backedByDoc === "true" ||
+      req.headers["x-verify-doc-backing"] === "true";
 
     try {
       // 1. Health check
@@ -82,15 +104,15 @@ export function createMockServer() {
 
       // 2. Auth routes
       if (pathname === "/api/auth/user") {
-        return sendJson(res, 200, handleGetAuthUser());
+        return respondWithDocCheck(res, 200, handleGetAuthUser(), authUserDoc, verifyDocBacking);
       }
       if (pathname === "/api/auth/organization") {
-        return sendJson(res, 200, handleGetAuthOrganization());
+        return respondWithDocCheck(res, 200, handleGetAuthOrganization(), authOrgDoc, verifyDocBacking);
       }
 
       // 3. Workspaces routes
       if (pathname === "/api/workspaces") {
-        return sendJson(res, 200, handleGetWorkspaces(query));
+        return respondWithDocCheck(res, 200, handleGetWorkspaces(query), workspacesDoc, verifyDocBacking);
       }
       if (pathname.startsWith("/api/workspaces/")) {
         const slug = pathname.replace("/api/workspaces/", "");
@@ -98,12 +120,12 @@ export function createMockServer() {
         if (!detail) {
           return sendJson(res, 404, { error: `Workspace not found: ${slug}` });
         }
-        return sendJson(res, 200, detail);
+        return respondWithDocCheck(res, 200, detail, workspaceDetailDoc, verifyDocBacking);
       }
 
       // 4. API keys
       if (pathname === "/api/keys") {
-        return sendJson(res, 200, handleGetApiKeys(query));
+        return respondWithDocCheck(res, 200, handleGetApiKeys(query), apiKeysDoc, verifyDocBacking);
       }
 
       // 5. Ranking sessions and inference
@@ -141,18 +163,18 @@ export function createMockServer() {
           }
         );
 
-        return sendJson(res, 200, inferenceResult);
+        return respondWithDocCheck(res, 200, inferenceResult, rankInferenceDoc, verifyDocBacking);
       }
 
       if (pathname === "/api/v1/sessions") {
-        return sendJson(res, 200, handleGetRankSessions(query));
+        return respondWithDocCheck(res, 200, handleGetRankSessions(query), rankSessionsDoc, verifyDocBacking);
       }
 
       // Pattern: /api/v1/sessions/:id/candidates
       const candMatch = pathname.match(/^\/api\/v1\/sessions\/([^/]+)\/candidates$/);
       if (candMatch) {
         const sessionId = candMatch[1];
-        return sendJson(res, 200, handleGetCandidates(sessionId));
+        return respondWithDocCheck(res, 200, handleGetCandidates(sessionId), candidatesDoc, verifyDocBacking);
       }
 
       // Pattern: /api/v1/sessions/:id
@@ -163,39 +185,63 @@ export function createMockServer() {
         if (!detail) {
           return sendJson(res, 404, { error: `Session not found: ${sessionId}` });
         }
-        return sendJson(res, 200, detail);
+        return respondWithDocCheck(res, 200, detail, rankSessionDetailDoc, verifyDocBacking);
       }
 
       // 6. Receipts
       if (pathname === "/api/v1/receipts") {
-        return sendJson(res, 200, handleGetReceipts(query.sessionId));
+        return respondWithDocCheck(res, 200, handleGetReceipts(query.sessionId), receiptsDoc, verifyDocBacking);
       }
 
       // 7. Benchmarks
       if (pathname === "/api/benchmarks") {
-        return sendJson(res, 200, handleGetBenchmarkRuns(query.workspaceId));
+        return respondWithDocCheck(res, 200, handleGetBenchmarkRuns(query.workspaceId), benchmarkRunsDoc, verifyDocBacking);
       }
 
       // 8. Agent Component routes
       if (pathname === "/api/agent/threads") {
-        return sendJson(res, 200, handleGetAgentThreads(query.workspaceId));
+        return respondWithDocCheck(res, 200, handleGetAgentThreads(query.workspaceId), agentThreadsDoc, verifyDocBacking);
       }
       if (pathname === "/api/agent/messages") {
-        return sendJson(res, 200, handleGetAgentMessages(query.threadId));
+        return respondWithDocCheck(res, 200, handleGetAgentMessages(query.threadId), agentMessagesDoc, verifyDocBacking);
       }
 
       // 9. AgentMail Component routes
       if (pathname === "/api/agentmail/inboxes") {
-        return sendJson(res, 200, handleGetAgentMailInboxes(query.workspaceId));
+        return respondWithDocCheck(res, 200, handleGetAgentMailInboxes(query.workspaceId), agentMailInboxesDoc, verifyDocBacking);
       }
       if (pathname === "/api/agentmail/threads") {
-        return sendJson(res, 200, handleGetAgentMailThreads(query.inboxId));
+        return respondWithDocCheck(res, 200, handleGetAgentMailThreads(query.inboxId), agentMailThreadsDoc, verifyDocBacking);
       }
       if (pathname === "/api/agentmail/messages") {
-        return sendJson(res, 200, handleGetAgentMailMessages(query.threadId));
+        return respondWithDocCheck(res, 200, handleGetAgentMailMessages(query.threadId), agentMailMessagesDoc, verifyDocBacking);
       }
 
-      // 10. Fallback 404
+      // 10. Treg Developer Tools routes
+      if (pathname === "/api/treg/tools") {
+        return respondWithDocCheck(res, 200, handleGetTregTools(query), tregToolsDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/treg/calls") {
+        return respondWithDocCheck(res, 200, handleGetTregCalls(query.ownerHash), tregCallsDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/treg/call" && req.method === "POST") {
+        const body = (await parseJsonBody(req)) as unknown as TregExecuteRequest;
+        const callResult = handlePostTregExecute(body);
+
+        // Record spend receipt in mockStore
+        mockStore.insertTregCall({
+          callId: callResult.callId,
+          ownerHash: body.owner ? `hash_${body.owner.slice(0, 8)}` : "hash_anonymous",
+          endpoint: callResult.endpoint,
+          costMicro: callResult.costMicro,
+          servedVia: callResult.servedVia,
+          at: callResult.at,
+        });
+
+        return respondWithDocCheck(res, 200, callResult, tregExecuteDoc, verifyDocBacking);
+      }
+
+      // 11. Fallback 404
       return sendJson(res, 404, {
         error: "Route not found",
         pathname,
@@ -216,6 +262,9 @@ export function createMockServer() {
           "/api/agentmail/inboxes",
           "/api/agentmail/threads",
           "/api/agentmail/messages",
+          "/api/treg/tools",
+          "/api/treg/calls",
+          "/api/treg/call",
         ],
       });
     } catch (err: unknown) {

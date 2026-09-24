@@ -1,9 +1,17 @@
-import type { AgentMailInbox } from "../schema.ts";
+import type { AgentMailInbox, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/agentmail/inboxes
  * Description: Retrieves AgentMail reactive inboxes for a workspace.
+ * Backed by authoritative documentation in docs/convex/components/agentmail/README.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/convex/components/agentmail/README.md",
+  specSection: "Inboxes & Webhooks",
+  specUrl: "https://agentmail.to/docs/inboxes",
+  requiredFields: ["id", "workspaceId", "email", "displayName"],
+  lastVerified: "2026-09-25",
+};
 export const mockAgentMailInboxesData: AgentMailInbox[] = [
   {
     id: "inbox_rank_01",

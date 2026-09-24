@@ -1,9 +1,17 @@
-import type { AgentMailMessage } from "../schema.ts";
+import type { AgentMailMessage, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/agentmail/messages
  * Description: Retrieves individual email messages in an AgentMail thread.
+ * Backed by authoritative documentation in docs/convex/components/agentmail/README.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/convex/components/agentmail/README.md",
+  specSection: "Email Serialization & Inbound Delivery",
+  specUrl: "https://agentmail.to/docs/messages",
+  requiredFields: ["id", "threadId", "from", "to", "subject", "bodyText", "status"],
+  lastVerified: "2026-09-25",
+};
 export const mockAgentMailMessagesData: AgentMailMessage[] = [
   {
     id: "mmsg_rank_01",

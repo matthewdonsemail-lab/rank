@@ -152,3 +152,47 @@ export interface RankInferenceResponse {
     rank: number;
   }>;
 }
+
+export interface DocBackingMetadata {
+  docPath: string;
+  specSection: string;
+  specUrl: string;
+  requiredFields: string[];
+  lastVerified: string;
+}
+
+export interface TregTool {
+  id: string;
+  endpoint: string;
+  name: string;
+  provider: string;
+  category: string;
+  approxCostUsd: number;
+  description: string;
+}
+
+export interface TregCallReceipt {
+  callId: string;
+  ownerHash: string;
+  endpoint: string;
+  costMicro: number;
+  servedVia: string;
+  at: number;
+}
+
+export interface TregExecuteRequest {
+  owner: string;
+  endpoint: string;
+  params: Record<string, unknown>;
+  maxCostUsd?: number;
+}
+
+export interface TregExecuteResponse {
+  callId: string;
+  endpoint: string;
+  result: Record<string, unknown>;
+  costMicro: number;
+  servedVia: string;
+  at: number;
+}
+

@@ -1,9 +1,17 @@
-import type { Workspace } from "../schema.ts";
+import type { Workspace, DocBackingMetadata } from "../schema.ts";
 
 /**
  * Route: GET /api/workspaces
  * Description: Retrieves list of workspaces for organization.
+ * Backed by authoritative documentation in docs/architecture.md.
  */
+export const docBacking: DocBackingMetadata = {
+  docPath: "docs/architecture.md",
+  specSection: "Data Model & Isolation Boundary",
+  specUrl: "https://rank.listeningkit.com/docs/architecture",
+  requiredFields: ["id", "organizationId", "name", "slug", "ownerId", "plan"],
+  lastVerified: "2026-09-25",
+};
 export const mockWorkspacesData: Workspace[] = [
   {
     id: "ws_rank_01",
