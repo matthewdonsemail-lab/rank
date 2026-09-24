@@ -1,0 +1,17 @@
+# Hackathon log
+
+- **Project:** Rank by ListeningKit
+- **Event:** Nebius AI Studio Hackathon
+- **What it does:** Ultra-low latency AI ranking, semantic reranking, and model decision routing engine built for Nebius AI Studio and TypeSafe AI on Convex.
+- **Live app:** https://rank.listeningkit.com
+- **Repo:** https://github.com/matthewdonsemail-lab/rank
+- **Backend:** Convex Cloud
+- **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
+- **Protocols:** REST API & Model Context Protocol (MCP)
+- **Started:** 2026-09-25T01:57:00Z
+- **Last updated:** 2026-09-25T03:48:00Z
+
+## Log
+
+### 2026-09-25 - repository initialization, documentation architecture, diagrams, and gating
+Initialized public GitHub repository `matthewdonsemail-lab/rank` for the Nebius AI Studio Hackathon. Set up complete domain-separated documentation architecture (`docs/architecture.md`, `docs/features.md`, `docs/api-and-mcp.md`, `docs/self-hosting.md`, `docs/contributing.md`), 5 standalone Mermaid diagrams in `docs/diagrams/` with interactive gallery, attached branded banner, established MIT license, configured pre-push gating (`lefthook.yml`) with brand rules and hackathon log verification, and pulled reference documentation for Nebius AI, TypeSafe AI, and Convex.

@@ -1,0 +1,11 @@
+# Git hooks managed by lefthook (https://github.com/evilmartians/lefthook).
+# Install after cloning: pnpm exec lefthook install
+
+pre-push:
+  jobs:
+    - name: hackathon log updated within 30 min
+      run: node scripts/check-hackathon-log.mjs
+    - name: no monospace fonts (brand rule)
+      run: node scripts/check-no-font-mono.mjs
+    - name: no tracking-* utilities (brand rule)
+      run: node scripts/check-no-tracking.mjs
