@@ -1,0 +1,32 @@
+flowchart LR
+  subgraph clients["Clients & Upstreams"]
+    APP["Web Application<br/>(rank.listeningkit.com)"]
+    AGENT["AI Coding Agents<br/>(Cursor, Claude, MCP)"]
+    SEARCH["Search / RAG Engines<br/>(Vector DB, BM25)"]
+  end
+
+  subgraph rank["Rank Core Engine"]
+    GATEWAY["API Gateway / Hono Router<br/>Auth & Rate Limiting"]
+    CACHE[("In-Memory Fast Cache<br/>LRU / Exact Query Hits")]
+    FUSION["Reciprocal Rank Fusion<br/>Multi-Signal Combiner"]
+    ROUTER["Model & Inference Router<br/>Cost & Latency Balancer"]
+  end
+
+  subgraph backends["Inference Backends"]
+    NEBIUS["Nebius AI Studio<br/>(BGE-Reranker, Llama-3.3, DeepSeek)"]
+    TYPESAFE["TypeSafe AI (Jev)<br/>(System One Decisions & Calibration)"]
+    TREG["treg.to Proxy<br/>(External Provider Catalog)"]
+  end
+
+  subgraph storage["Persistent Storage"]
+    CX[("Convex Cloud<br/>Queries, Mutations & Receipts")]
+  end
+
+  APP & AGENT & SEARCH --> GATEWAY
+  GATEWAY <--> CACHE
+  GATEWAY --> FUSION
+  FUSION --> ROUTER
+  ROUTER --> NEBIUS
+  ROUTER --> TYPESAFE
+  ROUTER --> TREG
+  GATEWAY <--> CX

@@ -37,3 +37,8 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# External Documentation (pulled locally via scripts, ignored from git)
+docs/typesafe/
+docs/convex/
+docs/treg/

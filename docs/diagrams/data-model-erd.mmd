@@ -1,0 +1,75 @@
+erDiagram
+  WORKSPACE ||--o{ API_KEY : owns
+  WORKSPACE ||--o{ RANK_SESSION : executes
+  WORKSPACE ||--o{ BENCHMARK_RUN : tracks
+
+  RANK_SESSION ||--|{ CANDIDATE : contains
+  RANK_SESSION ||--o{ RECEIPT : incurs
+  RANK_SESSION }|..|| MODEL_CONFIG : uses
+
+  WORKSPACE {
+    string id PK
+    string name
+    string slug
+    string plan
+    datetime createdAt
+  }
+
+  API_KEY {
+    string id PK
+    string workspaceId FK
+    string hashedSecret
+    string label
+    string[] scopes
+    datetime lastUsedAt
+  }
+
+  RANK_SESSION {
+    string id PK
+    string workspaceId FK
+    string query
+    string strategy
+    int candidateCount
+    float latencyMs
+    datetime createdAt
+  }
+
+  CANDIDATE {
+    string id PK
+    string sessionId FK
+    string externalId
+    string text
+    float initialScore
+    float rerankScore
+    float confidence
+    int finalRank
+  }
+
+  RECEIPT {
+    string id PK
+    string sessionId FK
+    string provider
+    string model
+    int tokensUsed
+    float costUsd
+    datetime timestamp
+  }
+
+  MODEL_CONFIG {
+    string id PK
+    string provider
+    string modelId
+    float costPer1kTokens
+    int maxContextLength
+    boolean isDefault
+  }
+
+  BENCHMARK_RUN {
+    string id PK
+    string workspaceId FK
+    string dataset
+    float ndcg10
+    float mrr
+    float avgLatencyMs
+    datetime completedAt
+  }

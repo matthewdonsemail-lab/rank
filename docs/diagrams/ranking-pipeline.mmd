@@ -1,0 +1,16 @@
+flowchart TD
+  Q["Incoming Query + Candidate Corpus"] --> FAST["1. Fast Search (BM25 / Vector Search)"]
+  FAST --> SHORTLIST["Shortlist of N Candidates (e.g. N=30)"]
+  SHORTLIST --> CACHE_CHECK{"Cache Hit?"}
+  CACHE_CHECK -- "Yes" --> CACHED_SCORES["Return Cached Logits / Scores"]
+  CACHE_CHECK -- "No" --> DISPATCH["2. Precision Scoring Dispatch"]
+  
+  subgraph scoring["Inference Gating"]
+    DISPATCH --> CE["Nebius Cross-Encoder<br/>(BAAI/bge-reranker-v2-m3)"]
+    DISPATCH --> S1["TypeSafe System One (Jev)<br/>(Confidence + Typed Primitives)"]
+  end
+
+  CE --> RRF["3. Reciprocal Rank Fusion & Normalization"]
+  S1 --> RRF
+  CACHED_SCORES --> RRF
+  RRF --> TOPK["4. Calibrated Top-K Results + Explanations"]
