@@ -11,9 +11,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T09:50:00Z
+- **Last updated:** 2026-09-25T10:10:00Z
 
 ## Log
+
+### 2026-09-25 - pipeline diagram on the README (Mandeep)
+The pipeline diagram was only in `docs/diagrams/ranking-pipeline.mmd`, so it did not show on the repository front page. Added a "How a Run Works" section to `README.md` with the same Mermaid diagram (GitHub renders it), and updated the prospect judgment row in the implementation table to mention homepage reads and Nebius ranking.
 
 ### 2026-09-25 - pipeline diagram (Mandeep)
 Rewrote `docs/diagrams/ranking-pipeline.mmd`, which still described the old local baseline, to show the real flow from enrichment and discovery through homepage reads, Nebius reranking with its fallback, and TypeSafe judgment to the prospect queues. Updated the diagrams README to match.

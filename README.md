@@ -30,13 +30,42 @@ The current implementation owns the first three steps and the persisted outbound
 | Brand grounding | `lib/brand/` | Stores identity, offerings, voice, sources, and deterministic prompt helpers |
 | Source enrichment | `lib/firecrawl/crawl/` and `convex/enrichment.ts` | Maps and scrapes source pages through the Firecrawl boundary |
 | Competitor discovery | `lib/xstate/competitor-discovery/` and `convex/competitorDiscovery.ts` | Calls Treg providers and normalizes candidate domains |
-| Prospect judgment | `lib/typesafe/evaluator/` and `convex/prospectEvaluation.ts` | `TypeSafeEvaluator` calls System One and persists `act`, `review`, or `drop` |
+| Prospect judgment | `lib/nebius/rerank/`, `lib/typesafe/evaluator/` and `convex/prospectEvaluation.ts` | Reads candidate homepages, ranks candidates with Nebius, then `TypeSafeEvaluator` calls System One and persists `act`, `review`, or `drop` |
 | Outbound conversations | `lib/xstate/outbound/`, `lib/xstate/contact-resolution/`, `convex/outbound.ts`, and `convex/email.ts` | Persists contact resolution, guest-post approvals, reply/deal state, follow-ups, domain/inbox pools, and AgentMail idempotency |
 | Agent reasoning | `convex/agent.ts` and `lib/xstate/outbound/agent-prompt.ts` | Creates separate mock Agent reasoning sessions with brand/prospect/goal context |
 | Workflow state | `lib/xstate/` | XState v6 machines with retry, cancellation, and versioned persistence |
 | Verification | `mock/` and `scripts/verify-mock.mjs` | Exercises current mock routes and documentation-backed fixtures |
 
 `NebiusRerankClient` calls the Nebius Token Factory rerank endpoint (`POST /v1/rerank`, default model `Qwen/Qwen3-Reranker-8B`) with retries, response validation and plain-language errors. It has been tested against the documented response shape with a fake network only; it has not yet been run against the live Nebius API, and nothing in the workflow calls it yet. It needs `NEBIUS_API_KEY` and never falls back to an unranked list. `baselineRank` is the separate local stand-in for tests.
+
+## How a Run Works
+
+A run reads the brand's site, finds competitor domains, reads each candidate's homepage, ranks the candidates against the brand with Nebius, and only then spends TypeSafe calls judging the best ones. Solid arrows are the normal path; dotted arrows are the fallback when ranking cannot run (the candidates keep discovery order and `metrics.rerankStatus` records why). The diagram lives in [`docs/diagrams/ranking-pipeline.mmd`](docs/diagrams/ranking-pipeline.mmd); the other diagrams are listed in [`docs/diagrams/`](docs/diagrams/).
+
+```mermaid
+flowchart TD
+  SITE["Brand website"] --> ENRICH["brandEnrichmentMachine<br/>Firecrawl reads the site<br/>name, tagline, offerings"]
+  ENRICH --> DISCOVER["competitorDiscoveryMachine<br/>Treg finds competitor domains<br/>and shared search terms"]
+
+  subgraph EVAL["startCompetitorProspectEvaluations (convex/prospectEvaluation.ts)"]
+    direction TD
+    CANDS["Discovered candidates<br/>up to 50 are ranked"]
+    READ["Read homepages with Firecrawl<br/>first 25, 5 at a time, 20 s each<br/>title, description, text excerpt<br/>skipped when readHomepages is false"]
+    RANK["NebiusRerankClient<br/>POST /v1/rerank<br/>brand query against each candidate document<br/>keep the best limit (default 10, max 25)"]
+    FALLBACK["No key, no brand facts, or Nebius fails<br/>keep discovery order<br/>metrics.rerankStatus says why"]
+    JUDGE["TypeSafeEvaluator.judgeProspect<br/>POST /v1/systemone<br/>route, fit score, spam check"]
+    CANDS --> READ --> RANK
+    RANK -.-> FALLBACK
+    RANK --> JUDGE
+    FALLBACK -.-> JUDGE
+  end
+
+  ENRICH -. "brand facts become the rank query" .-> RANK
+  DISCOVER --> CANDS
+  JUDGE --> JUDGMENT["ProspectJudgment<br/>act | review | drop<br/>with confidence and reasons"]
+  JUDGMENT --> QUEUE["Convex prospect queues<br/>metrics: rerankScore, rerankStatus, homepageRead"]
+  QUEUE --> NEXT["contactResolutionMachine then outboundThreadMachine<br/>act prospects continue to outreach<br/>review prospects wait for a person"]
+```
 
 ## Machine Chain
 
