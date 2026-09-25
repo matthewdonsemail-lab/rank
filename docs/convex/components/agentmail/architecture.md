@@ -66,6 +66,6 @@ sequenceDiagram
   Comp->>Comp: Persist inboundMessage to sandbox table
   Comp->)App: Dispatch onMessageReceived(message, thread)
   Comp-->>HTTP: Return 200 OK
-  App->>App: Evaluate text with Rank models & schedule reply
+   App->>App: Record REPLY_RECEIVED for the matching outbound thread
   UI-->>Comp: Live WebSocket query updates thread view instantly
 ```

@@ -17,6 +17,19 @@ import { docBacking as tregCallsDoc } from "./data/treg-calls.ts";
 import { docBacking as brandDoc } from "./data/brand.ts";
 import { docBacking as brandSourcesDoc } from "./data/brand-sources.ts";
 import { docBacking as brandIntelDoc } from "./data/brand-intelligence.ts";
+import { docBacking as outboundDomainsDoc } from "./data/outreach-domains.ts";
+import { docBacking as outboundInboxesDoc } from "./data/outreach-inboxes.ts";
+import { docBacking as outboundCampaignsDoc } from "./data/outreach-campaigns.ts";
+import { docBacking as outboundThreadsDoc } from "./data/outreach-threads.ts";
+import { docBacking as contactResolutionDoc } from "./data/outreach-contact-resolution.ts";
+import { handleMockOutboundAnalysis, buildMockOutboundDraft } from "./data/outbound-providers.ts";
+import type { ContactResolutionEvent } from "../lib/xstate/contact-resolution/index.ts";
+import type {
+  OutboundAgentRequest,
+  OutboundBrandContext,
+  OutboundProspect,
+  OutboundThreadEvent,
+} from "../lib/xstate/outbound/index.ts";
 import { wrapWithDocBacking } from "./validator.ts";
 import type { RankInferenceRequest, TregExecuteRequest, DocBackingMetadata } from "./schema.ts";
 
@@ -100,6 +113,47 @@ export class ConvexMockClient {
         docMeta = agentMailMessagesDoc;
         break;
 
+      case "outbound:listDomains":
+        result = mockStore.getOutboundDomains(args.owner ? String(args.owner) : undefined, args.status ? String(args.status) : undefined);
+        docMeta = outboundDomainsDoc;
+        break;
+
+      case "outbound:listInboxes":
+        result = mockStore.getOutboundInboxes(
+          args.owner ? String(args.owner) : undefined,
+          args.status ? String(args.status) : undefined,
+          args.domain ? String(args.domain) : undefined,
+        );
+        docMeta = outboundInboxesDoc;
+        break;
+
+      case "outbound:listCampaigns":
+        result = mockStore.getOutboundCampaigns(args.owner ? String(args.owner) : undefined, args.status ? String(args.status) : undefined);
+        docMeta = outboundCampaignsDoc;
+        break;
+
+      case "outbound:listThreads":
+        result = mockStore.getOutboundThreads({
+          owner: args.owner ? String(args.owner) : undefined,
+          campaignId: args.campaignId ? String(args.campaignId) : undefined,
+          state: args.state ? String(args.state) : undefined,
+        });
+        docMeta = outboundThreadsDoc;
+        break;
+
+      case "outbound:listContactResolutions":
+        result = mockStore.getContactResolutions(args.owner ? String(args.owner) : undefined, args.state ? String(args.state) : undefined);
+        docMeta = contactResolutionDoc;
+        break;
+
+      case "outbound:getPool":
+        result = {
+          domains: mockStore.getOutboundDomains(args.owner ? String(args.owner) : undefined, "verified"),
+          inboxes: mockStore.getOutboundInboxes(args.owner ? String(args.owner) : undefined, "active"),
+        };
+        docMeta = outboundInboxesDoc;
+        break;
+
       case "treg:listTools":
         result = mockStore.getTregTools(args as { category?: string; provider?: string });
         docMeta = tregToolsDoc;
@@ -164,6 +218,80 @@ export class ConvexMockClient {
         return newKey;
       }
 
+      case "outbound:addDomain": {
+        return mockStore.insertOutboundDomain({
+          owner: String(args.owner || "usr_rank_01"),
+          domain: String(args.domain || ""),
+          localPartPrefixes: args.localPartPrefixes as string[] | undefined,
+          dailyLimit: args.dailyLimit as number | undefined,
+        });
+      }
+
+      case "outbound:addInbox": {
+        return mockStore.insertOutboundInbox({
+          owner: String(args.owner || "usr_rank_01"),
+          domain: String(args.domain || ""),
+          localPart: String(args.localPart || ""),
+          agentMailInboxId: args.agentMailInboxId as string | undefined,
+          displayName: args.displayName as string | undefined,
+          dailyLimit: args.dailyLimit as number | undefined,
+        });
+      }
+
+      case "outbound:provisionInboxPool": {
+        const owner = String(args.owner || "usr_rank_01");
+        const domain = String(args.domain || "");
+        const prefixes = [String(args.userName || ""), ...((args.additionalPrefixes as string[]) || [])];
+        return prefixes.map((localPart) => mockStore.insertOutboundInbox({ owner, domain, localPart }));
+      }
+
+      case "outbound:createCampaign": {
+        return mockStore.insertOutboundCampaign({
+          owner: String(args.owner || "usr_rank_01"),
+          name: String(args.name || "Guest post campaign"),
+          dailySendLimit: args.dailySendLimit as number | undefined,
+        });
+      }
+
+      case "outbound:createThread": {
+        return mockStore.insertOutboundThread({
+          owner: String(args.owner || "usr_rank_01"),
+          campaignId: String(args.campaignId || ""),
+          prospect: args.prospect as OutboundProspect,
+          brand: args.brand as OutboundBrandContext,
+        });
+      }
+
+      case "outbound:reserveDelivery": {
+        const owner = String(args.owner || "usr_rank_01");
+        const idempotencyKey = String(args.idempotencyKey || "");
+        const existing = mockStore.getOutboundDeliveries(owner).find((delivery) => delivery.idempotencyKey === idempotencyKey);
+        if (existing) return { delivery: existing, duplicate: true };
+        return {
+          delivery: mockStore.insertOutboundDelivery({
+            id: `outbound_delivery_${Date.now()}`,
+            owner,
+            threadId: String(args.threadId || ""),
+            idempotencyKey,
+            provider: String(args.provider || "agentmail"),
+            status: "reserved",
+            attemptedAt: Date.now(),
+          }),
+          duplicate: false,
+        };
+      }
+
+      case "outbound:createContactResolution": {
+        return mockStore.insertContactResolution({
+          owner: String(args.owner || "usr_rank_01"),
+          outboundThreadId: args.outboundThreadId as string | undefined,
+          domain: String(args.domain || ""),
+          candidateEmail: String(args.candidateEmail || ""),
+          contactName: String(args.contactName || ""),
+          publicationUrl: String(args.publicationUrl || ""),
+        });
+      }
+
       case "brand:save": {
         return mockStore.upsertBrand(args);
       }
@@ -198,6 +326,22 @@ export class ConvexMockClient {
       case "rank:execute": {
         const req = args as unknown as RankInferenceRequest;
         return handlePostRankInference(req);
+      }
+
+      case "outbound:transitionThread": {
+        return mockStore.transitionOutboundThread(String(args.threadId || ""), args.event as OutboundThreadEvent);
+      }
+
+      case "outbound:transitionContactResolution": {
+        return mockStore.transitionContactResolution(String(args.resolutionId || ""), args.event as ContactResolutionEvent);
+      }
+
+      case "outbound:analyzeReply": {
+        return await handleMockOutboundAnalysis(args as unknown as OutboundAgentRequest);
+      }
+
+      case "outbound:createDraft": {
+        return { draft: buildMockOutboundDraft({ to: String(args.to || ""), brandVoice: String(args.brandVoice || "Rank"), guestPostAngle: String(args.guestPostAngle || "a useful angle") }) };
       }
 
       case "treg:callTool": {

@@ -1,17 +1,41 @@
-// Domain types
 export type {
   DecisionType,
   DecisionOption,
   DecisionEvaluationRequest,
   CalibratedConfidence,
   DecisionEvaluationResult,
+  ProspectAction,
+  ProspectJudgment,
+  ProspectJudgmentOptions,
+  LinkProspect,
+  NoulAnswer,
+  NoulCriteria,
+  NoulQuestion,
+  ChoiceAnswer,
+  ChoiceCriteria,
+  ChoiceQuestion,
+  ScoreAnswer,
+  ScoreCriteria,
+  ScoreQuestion,
+  TypeSafeAnswer,
+  TypeSafeEntry,
+  TypeSafeEvaluatorConfig,
+  TypeSafeQuestion,
+  TypeSafeQuestionType,
+  TypeSafeQuestions,
+  TypeSafeUsage,
+  SystemOneCallOptions,
+  SystemOneEvaluationRequest,
+  SystemOneResult,
+  RetryPolicy,
+  SystemOneRequestErrorOptions,
 } from './types.js';
-
-// Domain evaluator service
+export { TypeSafeApiError } from './types.js';
 export { TypeSafeEvaluator } from './evaluator.js';
-
-// Clean helper re-exports
 export {
   calculateConfidenceInterval,
   buildCalibratedConfidence,
+  choice,
+  noul,
+  score,
 } from './helpers/index.js';

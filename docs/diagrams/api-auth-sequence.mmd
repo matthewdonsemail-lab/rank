@@ -1,24 +1,21 @@
 sequenceDiagram
   autonumber
-  actor Client as Client / Agent
-  participant Gateway as API Gateway (Hono)
-  participant Auth as Auth & Rate Limiter
-  participant Cache as Fast LRU Cache
-  participant Nebius as Nebius AI Studio
-  participant Storage as Convex Ledger
+  actor Client as Authenticated client
+  participant Action as Convex action
+  participant Owner as requireOwner
+  participant Machine as XState v6 machine
+  participant Provider as Firecrawl / Treg / TypeSafe
+  participant DB as Convex tables
 
-  Client->>Gateway: POST /v1/rerank (Bearer sk-rank-...)
-  Gateway->>Auth: Validate API Key & Scopes
-  Auth-->>Gateway: Key Valid (Workspace: ws_123)
-  
-  Gateway->>Cache: Lookup hash(query + candidates)
-  alt Cache Hit
-    Cache-->>Gateway: Return Scored Results (sub-ms)
-  else Cache Miss
-    Gateway->>Nebius: POST /v1/rerank (Cross-Encoder Batch)
-    Nebius-->>Gateway: Raw Logits & Softmax Probs
-    Gateway->>Cache: Store Scored Results
-    Gateway->)Storage: Record Receipt & Token Telemetry (Async)
-  end
-
-  Gateway-->>Client: 200 OK (Ranked Candidates + Metadata)
+  Client->>Action: start or advance workflow
+  Action->>Owner: getUserIdentity()
+  Owner-->>Action: owner identity
+  Action->>DB: load owned run
+  Action->>Machine: restore state and context
+  Machine-->>Action: current snapshot
+  Action->>Provider: perform one external operation
+  Provider-->>Action: typed result or error
+  Action->>Machine: send typed event
+  Machine-->>Action: next snapshot
+  Action->>DB: persist state and context
+  Action-->>Client: run view or queue item

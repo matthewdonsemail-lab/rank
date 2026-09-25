@@ -2,17 +2,22 @@
   "name": "rank",
   "version": "0.1.0",
   "type": "module",
-  "description": "High-throughput, ultra-low latency AI ranking & reranking engine built for Nebius AI infrastructure",
+  "description": "Machine-driven brand grounding, prospect evaluation, and stateful guest-post outreach workflow",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
     "mock:server": "node --experimental-strip-types mock/server.ts",
-    "mock:verify": "node scripts/verify-mock.mjs"
+    "mock:verify": "node scripts/verify-mock.mjs",
+    "check:machines": "node scripts/check-machine-docs.mjs",
+    "check:docs": "node scripts/check-project-docs.mjs",
+    "docs:xstate": "node scripts/pull-xstate-docs.mjs"
   },
   "keywords": [
     "nebius",
@@ -33,8 +38,13 @@
     "@firecrawl/firecrawl-convex": "0.1.1",
     "@listeningkit/treg": "^0.1.3",
     "convex": "^1.46.0",
-    "svix": "^1.70.0"
+    "svix": "^1.70.0",
+    "xstate": "6.0.0-alpha.59"
   },
   "author": "matthewdonsemail-lab",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
+  }
 }

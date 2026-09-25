@@ -1,82 +1,63 @@
-# Architecture Reference
+# Architecture
 
-> Technical design, data models, and system topology for **Rank by ListeningKit**.
+Rank is organized around explicit XState v6 machine contracts and Convex-owned persistence. The machine source is authoritative for states and events; this document explains how those contracts connect to the currently implemented boundaries.
 
----
+## Runtime Topology
 
-## System Overview
-
-**Rank by ListeningKit** is an ultra-low-latency AI ranking, semantic reranking, and model decision routing engine built for **Nebius AI Studio** and **TypeSafe AI (Jev / System One)** on **Convex Cloud**.
-
-```
-Client / Agent / Search Pipeline
-             │
-             ▼
-     ┌───────────────┐
-     │  API Gateway  │  (Hono / TypeScript)
-     └───────┬───────┘
-             │
-      ┌──────┴──────┐
-      ▼             ▼
-┌───────────┐ ┌───────────┐
-│ Fast LRU  │ │ Reciprocal│
-│ Cache Hit │ │Rank Fusion│
-└───────────┘ └─────┬─────┘
-                    │
-       ┌────────────┴────────────┐
-       ▼                         ▼
-┌───────────────┐        ┌───────────────┐
-│ Nebius Studio │        │  TypeSafe AI  │
-│ Cross-Encoder │        │  (System One) │
-└──────┬────────┘        └───────┬───────┘
-       │                         │
-       └────────────┬────────────┘
-                    ▼
-          ┌───────────────────┐
-          │  Convex Storage   │  (Audit, telemetry & receipts)
-          └───────────────────┘
+```text
+Authenticated client
+        |
+        v
+Convex action/query
+        |
+        +--> restore XState v6 machine
+        +--> perform one external operation
+        +--> send one typed event
+        +--> persist state and serializable context
+        v
+Convex tables and owner-scoped queues
 ```
 
----
+The generated [machine pipeline diagram](diagrams/machine-pipeline.mmd) shows the five current stages:
 
-## Core Subsystems
+1. `brandEnrichmentMachine` maps and scrapes a source site, then extracts structured facts.
+2. `competitorDiscoveryMachine` calls configured competitor providers and normalizes candidate domains.
+3. `prospectEvaluationMachine` calls `TypeSafeEvaluator` and stores an `act`, `review`, or `drop` judgment.
+4. `contactResolutionMachine` checks domain and contact deliverability, including alternate and bounce paths.
+5. `outboundThreadMachine` manages personalized guest-post outreach, reply intent, deal likelihood, provider links, and follow-up state.
 
-### 1. Ingestion & API Gateway
-- **HTTP Routing:** Type-safe Hono API routing requests for `/v1/rank`, `/v1/rerank`, and `/v1/evaluate`.
-- **Authentication:** SHA-256 hashed API token authorization matching keys against the workspace registry in Convex.
-- **Rate Limiting & Safety:** Adaptive concurrency controls to respect downstream provider rate ceilings.
+## Library Boundaries
 
-### 2. The Two-Stage Backlink Prospect Retrieval & Ranking Paradigm
-1. **Stage 1: Live Web Prospect Discovery & Spam Filtering**
-   - Real-time search across the web for relevant articles, roundups, resource directories, and competitor backlink profiles (via `@listeningkit/treg` - SpyFu, SE Ranking, Brave Search).
-   - Automated quality heuristics eliminate private blog networks (PBNs), generic link directories, and zero-traffic farms before opportunities enter the candidate queue.
-2. **Stage 2: Cross-Encoder Precision Opportunity Reranking ("Rank")**
-   - Target page content and brand source articles (`BrandEntity` and `BrandPage` in `lib/brand/`) are scored jointly through cross-encoders (e.g. `BAAI/bge-reranker-v2-m3` on Nebius AI Studio) to compute true contextual cross-attention logits.
-   - Generates an editorial fit score (0–100), a plain-language fit rationale, and a suggested placement angle (e.g. data citation, missing roundup item, guest contribution).
+| Path | Responsibility | Current external behavior |
+|---|---|---|
+| `lib/brand` | Brand entity, source records, prompt and reply helpers | Configurable HTTP client; mock server used for local verification |
+| `lib/firecrawl/crawl` | Firecrawl operation wrapper | Called from Convex enrichment actions |
+| `lib/convex/treg` | Treg client types and spend helpers | Called from Convex competitor discovery |
+| `lib/typesafe/evaluator` | Typed System One questions, parsing, retries, and prospect judgment | Called from Convex prospect evaluation |
+| `lib/nebius/rerank` | Reranking types and score helpers | Current client is a deterministic local baseline; remote model execution is not implemented |
+| `lib/convex/agent` | Agent-facing reasoning boundary and outbound prompt contract | Mock Agent sessions; Nebius adapter remains future work |
+| `lib/xstate/outbound` | Outbound thread state, provider contracts, reply prompt, and resolution labels | Used by Convex outbound actions and mock routes |
+| AgentMail provider boundary | Domain/inbox/thread/message transport and inbound-label bridge | Mounted component; live credentials are not configured |
+| `lib/convex/telemetry` | Telemetry types and formatting helpers | Available as a library boundary; not a current workflow stage |
 
-### 3. Content Grounding, Autonomous Outreach & First-Reply Handoff
-- **Brand Content Ground Truth (`lib/brand/`):** Indexes published articles, guides, and product offerings (`BrandPage`) to establish exactly why an external publication should cite your brand.
-- **Autonomous Pitch Drafting (`@convex-dev/agent`):** Drafts personalized, non-templated outreach pitches tailored to the specific target article and author angle, grounded in verified excerpts.
-- **Warmed Sending Pool & Follow-ups (`@agentmail/convex`):** Dispatches pitches through dedicated warmed sending accounts, running automated follow-ups until the prospect replies without risking primary domain reputation.
-- **First-Reply Handoff:** The moment an editor or site owner responds, automation immediately pauses and hands the conversation over to the founder's personal inbox.
-- **Competitor & Keyword Intelligence (`@listeningkit/treg`):** Ranks search visibility, competitor domains, and dorking queries via SpyFu, SE Ranking, and Brave Search.
+## Persistence
 
-### 4. TypeSafe AI (System One) Evaluator
-- Integrates with TypeSafe's **Jev** System One model to evaluate typed questions (Choice, Score, Noul) without freeform text generation.
-- Returns calibrated probability distributions and confidence scores used for intent routing and threshold gating.
+The Convex schema stores the state and context for enrichment, competitor discovery, prospect evaluation, contact resolution, and outbound threads. A context contains only serializable records needed to resume the next step. Provider clients, sockets, promises, and API keys are not placed in machine context.
 
-### 5. Reciprocal Rank Fusion (RRF)
-Combines signals across multiple rank lists into a unified score using:
-$$RRF(d) = \sum_{m \in M} \frac{w_m}{k + r_m(d)}$$
-where $k$ is a smoothing constant (default: 60), $w_m$ is the weight of model $m$, and $r_m(d)$ is the 1-based rank of document $d$.
+Prospect evaluation uses indexed owner/action/updated rows. `act` and `review` are active queue decisions; `drop` records remain queryable for audit and are never silently deleted. Outbound rows additionally persist user-owned domains, prefixed inboxes, campaign state, Agent and AgentMail identifiers, reply analysis, follow-up deadlines, and delivery idempotency keys.
 
-### 6. Persistent State & Convex Ledger
-- Every scoring operation records an asynchronous receipt in Convex containing token usage, model identifiers, latency breakdown, and customer metadata tags.
-- Provides real-time reactive observability into latency and NDCG metrics.
+## Agent and AgentMail Union
 
-### 7. Module Architecture & Namespacing
-Code across Rank is organized into normalized bounded contexts under `lib/{library}/{domainname}/helpers/`:
-- **Libraries (`{library}`):** Provider or subsystem layer (`nebius`, `typesafe`, `convex`, `hono`, `treg`, `agentmail`, `fumadocs`, `core`).
-- **Domains (`{domainname}`):** Normalized lowercase kebab-case capability bounded contexts (`rerank`, `inference`, `evaluator`, `telemetry`, `registry`, `dispatcher`, `routing`).
-- **Helpers (`helpers/`):** Pure internal helper routines re-exported cleanly via `helpers/index.ts` and parent `index.ts`.
-- Complete guidelines and anti-patterns: **[Naming & Architecture Conventions](naming-conventions.md)**.
+Agent reasoning and email transport are deliberately separate records. `outboundThreadMachine` stores `agentThreadId`, `agentMailThreadId`, and `agentMailInboxId` independently. `convex/agent.ts` creates a reasoning session and returns its Agent thread ID; `convex/email.ts` queues AgentMail transport, adds an `outbound-thread:<id>` label, and maps inbound messages back to the machine. A provider outage in one boundary must not fabricate the other boundary's identifier.
+
+## Future Model Integration
+
+The outbound machine and prompt contract are implemented, but live model execution is not. A future Nebius token-factory adapter can replace the Agent component's `mockModel`, validate a reply analysis, and send `ANALYSIS_READY` through the existing owner-scoped action. Credentials, model clients, and live sockets remain outside machine context.
+
+## Source of Truth
+
+- Machine definitions: `lib/xstate/**/machine.ts`
+- Machine manifest: `docs/xstate/machine-manifest.json`
+- Machine documentation: `docs/xstate/machines.md`
+- Convex schema: `convex/schema.ts`
+- Provider wrappers: `lib/firecrawl`, `lib/convex/treg`, `lib/typesafe`, `lib/xstate/outbound`, `convex/email.ts`

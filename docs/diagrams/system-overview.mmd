@@ -1,32 +1,45 @@
 flowchart LR
-  subgraph clients["Clients & Upstreams"]
-    APP["Web Application<br/>(rank.listeningkit.com)"]
-    AGENT["AI Coding Agents<br/>(Cursor, Claude, MCP)"]
-    SEARCH["Search / RAG Engines<br/>(Vector DB, BM25)"]
+  subgraph consumers["Consumers"]
+    CLIENT["Convex clients"]
+    MOCK["Mock server and typed clients"]
   end
 
-  subgraph rank["Rank Core Engine"]
-    GATEWAY["API Gateway / Hono Router<br/>Auth & Rate Limiting"]
-    CACHE[("In-Memory Fast Cache<br/>LRU / Exact Query Hits")]
-    FUSION["Reciprocal Rank Fusion<br/>Multi-Signal Combiner"]
-    ROUTER["Model & Inference Router<br/>Cost & Latency Balancer"]
+  subgraph workflows["XState v6 machine contracts"]
+    ENRICH["brandEnrichmentMachine<br/>idle → mapping → scraping → extracting"]
+    DISCOVER["competitorDiscoveryMachine<br/>idle → discovering → normalizing"]
+    EVALUATE["prospectEvaluationMachine<br/>idle → evaluating → completed"]
+    OUTBOUND["outboundThreadMachine<br/>draft → approval → reply → deal/follow-up"]
   end
 
-  subgraph backends["Inference Backends"]
-    NEBIUS["Nebius AI Studio<br/>(BGE-Reranker, Llama-3.3, DeepSeek)"]
-    TYPESAFE["TypeSafe AI (Jev)<br/>(System One Decisions & Calibration)"]
-    TREG["treg.to Proxy<br/>(External Provider Catalog)"]
+  subgraph boundaries["Domain boundaries"]
+    BRAND["Brand domain<br/>entity, sources, prompt helpers"]
+    FIRE["Firecrawl crawl client<br/>map, scrape, search, crawl"]
+    TREG["Treg client<br/>competitor provider calls"]
+    TYPESAFE["TypeSafeEvaluator<br/>System One questions and judgments"]
+    AGENT["Convex Agent<br/>reasoning thread; mock model"]
+    MAIL["AgentMail<br/>transport and inbound labels"]
+    POOL["Domain/inbox pool<br/>prefix selection and warm-up"]
+    RERANK["NebiusRerankClient<br/>current local baseline"]
   end
 
-  subgraph storage["Persistent Storage"]
-    CX[("Convex Cloud<br/>Queries, Mutations & Receipts")]
+  subgraph storage["Convex persistence"]
+    TABLES["enrichmentRuns<br/>competitorDiscoveryRuns<br/>prospectEvaluations<br/>outboundDomains/inboxes/campaigns/threads/deliveries"]
   end
 
-  APP & AGENT & SEARCH --> GATEWAY
-  GATEWAY <--> CACHE
-  GATEWAY --> FUSION
-  FUSION --> ROUTER
-  ROUTER --> NEBIUS
-  ROUTER --> TYPESAFE
-  ROUTER --> TREG
-  GATEWAY <--> CX
+  CLIENT --> ENRICH
+  MOCK --> BRAND
+  ENRICH --> FIRE
+  ENRICH --> TABLES
+  TABLES --> DISCOVER
+  DISCOVER --> TREG
+  DISCOVER --> TABLES
+  TABLES --> EVALUATE
+  EVALUATE --> TYPESAFE
+  EVALUATE --> TABLES
+  TABLES --> OUTBOUND
+  OUTBOUND --> AGENT
+  OUTBOUND --> MAIL
+  OUTBOUND --> POOL
+  OUTBOUND --> TABLES
+  BRAND --> RERANK
+  RERANK --> TABLES

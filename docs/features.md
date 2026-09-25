@@ -1,45 +1,67 @@
-# Features Reference
+# Features
 
-> Feature index and runtime capabilities of **Rank by ListeningKit**.
+This page lists capabilities that exist in the source tree and separates them from planned integrations.
 
----
+## Implemented Capabilities
 
-## Core Capabilities
+### Brand grounding
 
-### 1. Cross-Encoder Opportunity Reranking ("Rank")
-- **Model Support:** `BAAI/bge-reranker-v2-m3`, `bge-reranker-large`, and custom fine-tuned checkpoints deployed on Nebius AI Studio.
-- **Full Cross-Attention:** Computes joint token interactions between candidate web pages and your brand's published articles, research, and offerings rather than isolated embeddings.
-- **Calibrated Scoring:** Normalizes logits to an interpretable 0–100 relevance score reflecting placement viability and editorial alignment.
+- `BrandEntity` stores identity, voice, offerings, location, memory, channels, and intelligence.
+- `BrandClient` exposes typed mock/API operations for the brand record and source list.
+- `buildBrandSystemPrompt()` produces a deterministic, versioned prompt.
+- `retrieveSourceRefs()` returns source references using keyword-overlap matching.
+- `simulateOutbound()` provides a local reply simulation helper.
 
-### 2. Live Web Scraping (Never Stale Databases)
-- **Real-Time Data:** Discovers opportunities live on every run, ensuring metrics, organic traffic estimates, and contact details reflect the target publication today.
-- **Dynamic Angle Discovery:** Identifies newly published roundups, resource directories, and editorial guides as they appear.
+### Firecrawl operations
 
-### 3. PBN & Link Farm Spam Filter
-- **Automated Hygiene:** Evaluates candidate sites against known patterns of private blog networks (PBNs), automated link farms, and zero-traffic ghost sites.
-- **Editorial Standards:** Only passes through legitimate publications with real organic traffic and verifiable editorial ownership.
+- Map a site to candidate URLs.
+- Scrape selected pages with structured formats.
+- Search through the Firecrawl component boundary.
+- Start, inspect, cancel, resume, and delete crawls.
 
-### 4. Plain-Language Fit Rationales & Placement Angles
-- **Explainable Scoring:** Every ranked candidate is paired with a clear, concise fit rationale explaining why the page is a suitable placement.
-- **Angle Formulation:** Recommends specific editorial angles:
-  - *Data/Statistics Citation:* Citing original research or benchmarks published by the brand.
-  - *Missing Tool/Alternative:* Pitching inclusion in an existing software roundup or comparison article.
-  - *Resource Directory Addition:* Recommending tools or guides for curated reference lists.
-  - *Guest Editorial:* Proposing expert contributor articles on topics the publication actively covers.
+### XState v6 workflows
 
-### 5. Autonomous Outreach & First-Reply Handoff
-- **Context-Grounded Pitch Generation:** Powered by `@convex-dev/agent` to draft personalized pitches referencing the author's specific paragraphs and brand citation excerpts.
-- **Isolated Sending Pool:** Dispatches via `@agentmail/convex` warmed inboxes, keeping your primary domain reputation completely isolated from cold outreach volume.
-- **First-Reply Detection:** Automated follow-ups run autonomously until the prospect replies. The moment a response arrives, automation pauses and routes the conversation to your personal mailbox.
+- `brandEnrichmentMachine` persists mapping, scraping, extraction, failure, retry, and cancellation state.
+- `competitorDiscoveryMachine` persists provider results and normalized candidates.
+- `prospectEvaluationMachine` persists TypeSafe judgments as `act`, `review`, or `drop`.
+- `contactResolutionMachine` persists domain/contact checks, alternate-contact decisions, and bounce recovery.
+- `outboundThreadMachine` persists guest-post draft approval, Agent/AgentMail links, reply sentiment, deal likelihood, negotiation, follow-up, and delivery failure state.
+- Machine snapshots are versioned and tested through JSON round trips.
 
-### 6. Monitor-and-Cancel Opportunity Queue
-- **Full Visibility:** Daily queue presents target URL, SEO metrics, fit rationale, and generated email draft.
-- **User Control:** Cancel any opportunity that is not a fit before it sends; otherwise, outreach proceeds automatically.
+### TypeSafe evaluation
 
-### 7. Model Context Protocol (MCP) Server
-- **AI Assistant Integration:** Connect Claude Code, Cursor, or Codex directly to your link-building pipeline.
-- **Available MCP Tools:** `rank_backlink_prospects`, `evaluate_prospect_fit`, `get_opportunity_queue`, `get_pipeline_stats`.
+- Typed `noul`, `choice`, and `score` questions.
+- `/v1/systemone` requests through an injectable Fetch transport.
+- Bounded retries for transient responses.
+- `judgeProspect()` applies confidence and safety gates before returning a decision.
+- Owner-scoped Convex queues expose active, review, and dropped prospects.
 
-### 8. Sub-Millisecond Hot-Path Caching & Spend Safety
-- **LRU Cache:** In-memory caching for query-candidate signature hashes (`sha256(content_hash + target_url)`).
-- **Spend Ceilings:** Enforces optional cost ceilings (`max_cost_usd`) on batch scoring and scraping operations.
+### Outbound and provider bridge
+
+- User-owned sending domains and prefixed shared inboxes are represented in Convex tables and mock routes.
+- Agent reasoning IDs and AgentMail thread/inbox IDs remain separate in `outboundThreadMachine` context.
+- `buildOutboundReplyPrompt()` includes the explicit goal, brand voice, guest-post angle, prospect context, confidence, and deal likelihood.
+- `parseOutboundReplyAnalysis()` validates a future model's JSON intent, sentiment, confidence, deal likelihood, next action, labels, and rationale.
+- Mock Agent and AgentMail adapters demonstrate reply analysis and draft creation without live credentials.
+- `queueOutboundMessage` reserves an idempotency key, requires an approved state, adds an outbound thread label, and leaves delivery confirmation to the AgentMail lifecycle.
+- Inbound AgentMail labels can transition the matching thread to `analyzing_reply`.
+
+### Ranking utility
+
+- `NebiusRerankClient` currently provides a deterministic local baseline for candidate ordering.
+- `normalizeScores()`, `mergeRankings()`, and related helpers are available as standalone utilities.
+- A remote model request is not part of the current machine chain.
+
+## Planned Model Integration
+
+The outbound Agent action and prompt contract exist with a mock model. A future Nebius token-factory adapter can validate a reply analysis and feed `ANALYSIS_READY` to the existing machine. Live model credentials, response validation, and provider failure handling remain future work.
+
+## Verification
+
+```bash
+pnpm test
+pnpm build
+pnpm mock:verify
+pnpm check:machines
+pnpm check:docs
+```

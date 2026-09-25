@@ -1,39 +1,26 @@
-# Brand Entity Specification
+# Brand Domain
 
-One workspace, one brand record. Onboarding creates it from the website URL, the reveal enriches it, the dashboard Brand view edits it, and every reply draft, RAG context, and autonomous agent call reads it.
+`lib/brand` is the source-of-truth domain for the structured brand record used by the current mock API and future model consumers.
 
-Nothing in the engine invents business facts - anything the brand has not provided falls back to generic phrasing until real details are added.
+## BrandEntity sections
 
-## 1. Sections Overview
-
-Every field on the BrandEntity has exactly one defined consumer:
-
-| Section | Holds | Consumed by |
+| Section | Contents | Current consumers |
 |---|---|---|
-| `identity` | name, website, tagline, logo URL | Reply sign-off, resource links, client display |
-| `voice` | tone, formality, dos, donts, gold examples | `buildBrandSystemPrompt()` -> agent instructions |
-| `channels` | per-channel style, typing snippets, triage flow | `simulateOutbound()` preview, channel generation |
-| `memory` | working facts and boundaries (rules) | Compiled into system prompt; retrieved boundaries |
-| `offerings` | `{ name, detail }[]` services and products | Reply service-bit, agent tool context |
-| `location` | label, lat, lng, radiusKm | Candidate scoping, service area filtering |
-| `sources` | indexed website pages (url, title, headings, text) | RAG grounding, reply source citations |
-| `intelligence` | selected keyword, competitor domains, communities | Candidate retrieval seeding, query generation |
+| `identity` | Name, website, tagline, logo | Display and source indexing |
+| `voice` | Tone, formality, rules, examples | `buildBrandSystemPrompt()` |
+| `channels` | Optional channel profiles and examples | `simulateOutbound()` and typed helpers |
+| `memory` | User-provided facts and boundaries | Prompt compilation |
+| `offerings` | Named products and services | Prompt and reply context |
+| `location` | Location label and coordinates | Typed brand context |
+| `sources` | Indexed `BrandPage` records | `retrieveSourceRefs()` |
+| `intelligence` | Keywords, competitors, communities | Typed brand context |
 
-Two architectural rules:
-- Areas live in `location`, never in `voice`. Voice is purely about language dial and tone.
-- Offerings are objects (`{ name, detail }`), never bare strings.
+## Implemented operations
 
-## 2. Entity Lifecycle
+- `extractBrandFromUrl()` derives initial identity and hostname metadata.
+- `BrandClient` reads and updates the mock/API brand record and source list.
+- `buildBrandSystemPrompt()` deterministically compiles a versioned prompt.
+- `retrieveSourceRefs()` performs keyword-overlap source selection.
+- `simulateOutbound()` produces a local simulated reply; it does not send mail.
 
-1. **Extraction**: `extractBrandFromUrl()` derives clean display names and hostname metadata.
-2. **Persistence**: The entity is persisted in Convex `brands` table and in-memory mock store.
-3. **Compilation**: `buildBrandSystemPrompt()` deterministically compiles the instructions with version pinning (`PROMPT_VERSION = 2`).
-4. **Retrieval**: `retrieveSourceRefs()` matches keyword tokens against indexed page headings and text.
-5. **Outbound Simulation**: `simulateOutbound()` maps detected context against enabled autoreplies and gold examples.
-
-## 3. Brand Intelligence & Discovery
-
-The `intelligence` block stores:
-- `selectedKeyword`: The primary operand phrase chosen during reveal.
-- `competitors`: Verified competitor domains, deduped on append.
-- `targetCommunities`: Communities (`CommunityPick[]`) where the brand listens and engages.
+The current machine chain consumes the structured brand record as context. Agent execution and remote model calls are separate future integrations.

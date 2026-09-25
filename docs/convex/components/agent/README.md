@@ -1,74 +1,25 @@
-# Convex Agent Component (`@convex-dev/agent`)
+# Convex Agent Component Boundary
 
-The Convex Agent Component provides building blocks for autonomous AI agents on Convex with persistent conversation history, tool calling, and streaming over WebSockets.
+`@convex-dev/agent` is installed and mounted in the Convex app. It is the reasoning boundary for the outbound thread machine, while AgentMail remains the transport boundary. The current `mockModel` is an explicit placeholder until a Nebius model adapter is configured.
 
----
+## Current boundary
 
-## Overview
+- `convex/agent.ts` uses the Agent component's typed `mockModel` as an explicit placeholder until a Nebius model adapter is configured.
+- `startOutboundReasoning` creates a persistent Agent thread with the explicit guest-post goal, brand voice, prospect context, confidence, and deal likelihood.
+- The returned `agentThreadId` is linked to the outbound state through `linkAgentThread`; it is not treated as an AgentMail thread ID.
+- `convex/email.ts` owns the separate AgentMail transport and inbound-label bridge.
+- `act` prospect records remain the input to future outreach preparation, while TypeSafe remains the source of initial prospect judgment.
 
-The Agent component decouples long-running AI agent workflows from the user interface while preserving live, reactive updates on every connected client.
+## Nebius adapter boundary
 
-### Key Capabilities
+A future Nebius token-factory adapter should:
 
-- **Persistent Threads:** Multi-turn conversation history stored directly in Convex tables (`threads`, `messages`).
-- **Tool Calling:** Agents can execute synchronous and asynchronous tools implemented as Convex functions.
-- **WebSocket Streaming:** Text and object generation streams delta updates over WebSockets without HTTP chunking overhead.
-- **Context Injection:** Automatic retrieval of relevant thread history and optional vector search across prior sessions.
-- **Usage & Rate Gating:** Built-in usage attribution per model and rate limiter integration.
+1. Read the owner-scoped outbound thread and its brand/prospect context.
+2. Build the same versioned prompt contract used by `buildOutboundReplyPrompt`.
+3. Call the configured Nebius model through a dedicated adapter.
+4. Validate the JSON analysis result before sending `ANALYSIS_READY` to the machine.
+5. Keep credentials, model clients, and live sockets outside machine context.
 
----
+The outbound machine and mock Agent route are implemented; live model execution is not.
 
-## Installation & App Registration
-
-Install the package via npm or pnpm:
-
-```bash
-pnpm add @convex-dev/agent
-```
-
-Mount the component in `convex/convex.config.ts`:
-
-```typescript
-import { defineApp } from "convex/server";
-import agent from "@convex-dev/agent/convex.config";
-
-const app = defineApp();
-app.use(agent);
-
-export default app;
-```
-
----
-
-## Basic Usage
-
-Initialize an Agent instance using `components.agent` in `convex/agent.ts`:
-
-```typescript
-import { Agent } from "@convex-dev/agent";
-import { components } from "./_generated/api.js";
-import { action } from "./_generated/server.js";
-import { v } from "convex/values";
-
-export const rankAgent = new Agent(components.agent, {
-  name: "Rank Orchestrator",
-  instructions: "You evaluate queries and route candidate passages to Nebius cross-encoders.",
-});
-
-export const runAgentTurn = action({
-  args: { prompt: v.string() },
-  handler: async (ctx, { prompt }) => {
-    const { threadId, thread } = await rankAgent.createThread(ctx);
-    const result = await thread.generateText({ prompt });
-    return { threadId, text: result.text };
-  },
-});
-```
-
----
-
-## Subsystem Documentation
-
-- **[Architecture & Sandboxing](architecture.md):** Sandboxed data tables, transactions, and execution boundaries.
-- **[Tool Calling & Model Integration](tools.md):** Registering Nebius rerankers and TypeSafe evaluators as callable tools.
-- **[Threads & Context Memory](threads.md):** Managing thread state, search, and message lifecycles.
+See [the machine contracts](../../../xstate/machines.md) and [the backend reference](../../../backend-reference.md).

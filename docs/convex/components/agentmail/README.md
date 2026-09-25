@@ -2,6 +2,8 @@
 
 A Convex component that brings stateful email inboxes to AI agents. Messages sent and received are persisted as threads, complete with full bodies, labels, and delivery lifecycle tracking.
 
+This component is mounted as the transport and inbound-message boundary for the outbound thread machine. Agent reasoning and AgentMail transport remain separate: `convex/agent.ts` creates reasoning sessions, while `convex/email.ts` queues transport messages and maps inbound AgentMail labels back to an outbound thread.
+
 ---
 
 ## Overview
@@ -75,6 +77,16 @@ const outboundId = await agentmail.sendMessage(ctx, "inbox_abc", {
 ```
 
 ---
+
+## Rank outbound boundary
+
+- `convex/outbound.ts` stores user-owned sending domains, prefixed shared inboxes, their optional AgentMail provider inbox IDs, campaigns, persisted thread state, follow-up deadlines, and delivery idempotency keys.
+- `provisionAgentMailInbox` creates a provider inbox with a deterministic `clientId`; persist the returned provider inbox ID on the Rank pool record.
+- `queueOutboundMessage` requires an approved `ready_to_send` or `follow_up_due` thread and adds an `outbound-thread:<id>` label before calling the component's durable send queue.
+- The AgentMail component owns transport lifecycle; the XState machine owns approval, reply analysis, deal path, and follow-up state.
+- `handleIncomingEmail` reads the outbound label and records `REPLY_RECEIVED` against the matching thread instead of creating an unrelated conversational state.
+- `handleAgentMailEvent` maps sent/delivered/bounced/complained/rejected events to the Rank delivery record and advances or fails the outbound thread; `domain.verified` marks the matching Rank domain verified.
+- The Agent component's `startOutboundReasoning` action creates a separate reasoning thread. A future Nebius token-factory adapter can replace `mockModel` without changing AgentMail transport identifiers.
 
 ## Subsystem Documentation
 

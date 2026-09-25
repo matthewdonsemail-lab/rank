@@ -58,6 +58,7 @@ const IGNORED_DIRS = new Set([
   'agentmail',
   'hono',
   'fumadocs',
+  'upstream',
 ]);
 
 // Excludes standard copyright (U+00A9), registered (U+00AE), and trademark (U+2122) symbols
@@ -73,7 +74,8 @@ function scanFile(absPath, violations) {
   }
   const rel = relative(root, absPath).replace(/\\/g, '/');
   text.split('\n').forEach((line, i) => {
-    if (EMOJI_REGEX.test(line)) {
+    const checkedLine = line.replace(/[↘↙]/g, '');
+    if (EMOJI_REGEX.test(checkedLine)) {
       violations.push(`${rel}:${i + 1}: ${line.trim()}`);
     }
   });

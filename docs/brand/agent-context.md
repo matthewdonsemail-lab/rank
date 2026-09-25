@@ -1,19 +1,17 @@
-# Agent Context & RAG Grounding
+# Prompt and Source Context
 
-The brand entity provides the grounding layer for the Convex agent (`@convex-dev/agent`) and inference reranking modules.
+The brand domain provides deterministic context helpers for future model and agent consumers. The current machine chain does not invoke an agent directly.
 
-## 1. System Prompt Grounding
-
-The compiled brand prompt from `buildBrandSystemPrompt(brand)` is injected as the initial instructions during agent thread initialization:
+## Prompt compilation
 
 ```ts
-import { buildBrandSystemPrompt } from "@/lib/brand/index.js";
+import { buildBrandSystemPrompt } from "../../lib/brand/index.js";
 
 const instructions = buildBrandSystemPrompt(brand);
 ```
 
-## 2. Up-Front Retrieval (RAG Grounding)
+The compiler uses the structured identity, voice, memory, offerings, location, and source metadata. Its output is versioned with `PROMPT_VERSION`.
 
-Before generating replies or evaluating candidate suitability, `retrieveSourceRefs(brand, queryText)` executes keyword-overlap ranking across indexed brand pages (`brand.sources`).
+## Source selection
 
-Matching passages are surfaced with their canonical URL and excerpt, preventing hallucinations and ensuring direct citations.
+`retrieveSourceRefs(brand, queryText)` ranks indexed `BrandPage` records using keyword overlap and returns canonical URLs with matching passages. The result is serializable context for a caller; it is not a claim that a remote model has been invoked.

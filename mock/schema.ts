@@ -1,3 +1,13 @@
+import type {
+  ContactResolutionContext,
+  ContactResolutionState,
+} from "../lib/xstate/contact-resolution/index.ts";
+import type {
+  OutboundReplyAnalysis,
+  OutboundThreadContext,
+  OutboundThreadState,
+} from "../lib/xstate/outbound/index.js";
+
 /**
  * Relational schema definitions for the Rank mock architecture.
  * Mirrors Convex backend tables, @convex-dev/agent component data,
@@ -131,6 +141,93 @@ export interface AgentMailMessage {
   bodyText: string;
   status: "received" | "processed" | "triaged";
   receivedAt: number;
+}
+
+export interface ContactResolutionRecord {
+  id: string;
+  owner: string;
+  outboundThreadId?: string;
+  state: ContactResolutionState;
+  context: ContactResolutionContext;
+  createdAt: number;
+  updatedAt: number;
+  snapshot?: unknown;
+}
+
+export type OutboundDomainStatus = "pending" | "verified" | "warming" | "paused" | "error";
+export type OutboundInboxStatus = "active" | "warming" | "paused" | "error";
+export type OutboundCampaignStatus = "draft" | "running" | "paused" | "completed" | "cancelled";
+export type OutboundDeliveryStatus = "reserved" | "sent" | "failed" | "bounced";
+
+export interface OutboundDomain {
+  id: string;
+  owner: string;
+  domain: string;
+  status: OutboundDomainStatus;
+  localPartPrefixes: string[];
+  dailyLimit: number;
+  sentToday: number;
+  warmupScore: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OutboundInbox {
+  id: string;
+  owner: string;
+  domain: string;
+  localPart: string;
+  address: string;
+  agentMailInboxId?: string;
+  displayName: string;
+  status: OutboundInboxStatus;
+  dailyLimit: number;
+  sentToday: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OutboundCampaign {
+  id: string;
+  owner: string;
+  name: string;
+  goal: "guest_post";
+  status: OutboundCampaignStatus;
+  dailySendLimit: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OutboundThread {
+  id: string;
+  owner: string;
+  campaignId: string;
+  state: OutboundThreadState;
+  context: OutboundThreadContext;
+  labels: string[];
+  nextFollowUpAt?: number;
+  snapshot?: unknown;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OutboundDelivery {
+  id: string;
+  owner: string;
+  threadId: string;
+  idempotencyKey: string;
+  provider: string;
+  status: OutboundDeliveryStatus;
+  providerMessageId?: string;
+  attemptedAt: number;
+  sentAt?: number;
+}
+
+export interface OutboundAnalysisRecord {
+  id: string;
+  threadId: string;
+  analysis: OutboundReplyAnalysis;
+  createdAt: number;
 }
 
 export interface RankInferenceRequest {

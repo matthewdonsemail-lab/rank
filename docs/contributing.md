@@ -1,41 +1,40 @@
-# Contributing to Rank
+# Contributing
 
-We welcome contributions to **Rank by ListeningKit**! Please read this guide before submitting pull requests or issues.
+## Development loop
 
----
+```bash
+pnpm install
+pnpm test
+pnpm build
+pnpm mock:verify
+```
 
-## Development Workflow
+## Machine changes
 
-1. **Fork and branch**:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-2. **Install dependencies**:
-   ```bash
-   pnpm install
-   ```
-3. **Verify tests and builds**:
-   ```bash
-   pnpm run build
-   pnpm run test
-   ```
-4. **Commit messages**:
-   Follow conventional commits format:
-   - `feat: add hybrid reciprocal rank fusion pipeline`
-   - `fix: correct token calculation in cross-encoder adapter`
-   - `docs: update self-hosting instructions`
+1. Change or add the machine under `lib/xstate/<domain>/machine.ts`.
+2. Add or update its colocated `machine.test.ts`.
+3. Update the machine's stable `id` or `version` when its persisted contract changes.
+4. Regenerate the manifest, inventory, and machine diagram:
 
----
+```bash
+node scripts/check-machine-docs.mjs --write
+```
 
-## Code Style & Conventions
+5. Run `pnpm check:machines` and `pnpm check:docs`.
 
-- Use TypeScript with strict type checking enabled.
-- Avoid loose `any` types; define explicit interfaces in `src/types/`.
-- Ensure all public functions and methods are covered with unit tests.
-- When adding architecture changes, update the Mermaid diagrams in `docs/diagrams/`.
+External provider calls belong in Convex actions. Keep machine transitions deterministic and serializable.
 
----
+## Code boundaries
 
-## License
+- Use the `lib/{library}/{domainname}/helpers/` structure.
+- Keep helpers pure and explicitly re-exported.
+- Keep provider secrets in the runtime environment.
+- Do not document a provider, endpoint, or machine state until its implementation and tests exist.
 
-By contributing, you agree that your contributions will be licensed under the project's [MIT License](../LICENSE).
+## XState references
+
+The project uses the published v6 alpha package. Refresh the upstream reference pages with:
+
+```bash
+pnpm docs:xstate
+```

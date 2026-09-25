@@ -8,6 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "isolatedModules": true,
+    "allowImportingTsExtensions": true,
     "module": "ESNext",
     "noEmit": true
   },

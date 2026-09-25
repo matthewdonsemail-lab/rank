@@ -1,19 +1,12 @@
-# Channel Communication Profiles
+# Channel Profiles
 
-The `channels` dictionary maintains discrete communication and outreach configurations across platform contexts (`facebook`, `x`, and `reddit`), governing tone style, author outreach snippets, triage steps, and response behavior.
+The `channels` field stores optional communication profiles on a `BrandEntity`. It is data for local reply simulation and future consumers; it is not a currently active outreach stage.
 
-## 1. Channel Profile Structure
+Each profile may contain:
 
-Each channel entry contains:
-- `style`: `'casual' | 'standard'`. Casual styling applies relaxed lowercase typography and fast messaging conventions.
-- `examples`: Curated writing snippets for the communication context (fragments, direct responses, natural phrasing, no corporate boilerplate).
-- `triage`: Ordered prioritization steps (e.g. initiating direct outreach, qualifying resource fit, scheduling editorial review).
-- `autoreplies`: Baseline messages triggered by keyword overlap against inquiry text.
+- `style`: `casual` or `standard`.
+- `examples`: User-approved writing examples.
+- `triage`: Ordered contextual guidance.
+- `autoreplies`: Keyword-matched response templates.
 
-## 2. Autoreply Resolution
-
-When evaluating outbound replies:
-1. Enabled channel autoreplies are scored first by token intersection.
-2. Ties preserve the user-approved trigger response verbatim.
-3. If no autoreply matches, gold voice examples are evaluated.
-4. Fallback styling applies channel default sign-offs.
+`simulateOutbound()` resolves a context string against enabled channel profiles using the brand helpers. It returns a simulated result and does not call an external messaging provider.

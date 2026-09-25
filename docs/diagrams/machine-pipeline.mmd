@@ -1,0 +1,12 @@
+flowchart LR
+  NOTE["Generated from lib/xstate/*/machine.ts<br/>XState v6 runtime<br/>machine contract version 1"]
+  M1["brandEnrichmentMachine<br/>brand-enrichment<br/>idle → mapping → scraping → extracting → failed → completed → cancelled"]
+  M2["competitorDiscoveryMachine<br/>competitor-discovery<br/>idle → discovering → normalizing → failed → completed → cancelled"]
+  M1 --> M2
+  M3["prospectEvaluationMachine<br/>prospect-evaluation<br/>idle → evaluating → failed → completed → cancelled"]
+  M2 --> M3
+  M4["contactResolutionMachine<br/>contact-resolution<br/>idle → checking_domain → checking_contact → deliverable → needs_alternate → bounced → failed → cancelled"]
+  M3 --> M4
+  M5["outboundThreadMachine<br/>outboundThread<br/>idle → drafting → review_required → ready_to_send → sending → awaiting_reply → analyzing_reply → follow_up_scheduled → follow_up_due → engaged → negotiating → scheduled → closed_won → closed_lost → failed → cancelled"]
+  M4 --> M5
+  NOTE -.-> M1

@@ -1,21 +1,13 @@
-# Voice to System Prompt Compiler
+# Voice Compiler
 
-The voice compiler `buildBrandSystemPrompt()` transforms structured brand properties into deterministic instructions for language models and autonomous agents.
+`buildBrandSystemPrompt()` turns structured brand properties into deterministic prompt text for future model consumers.
 
-## 1. Compiler Invariants
+## Invariants
 
-- **Deterministic**: The same `BrandEntity` always compiles byte-for-byte to the exact same prompt string.
-- **Versioned**: Every compile is stamped with `PROMPT_VERSION = 2`. Historic drafts retain their generation version.
-- **Strict Boundary Enforcement**: Prohibitions (`donts`) and working facts (`memory.rules`) are compiled as hard directives.
+- The same `BrandEntity` produces the same prompt.
+- The compiler stamps `PROMPT_VERSION = 2`.
+- User-provided rules and memory boundaries are included as explicit context.
+- Formality controls the language register: `casual`, `professional`, or `formal`.
+- Gold examples are included as approved style references.
 
-## 2. Formality Dials
-
-The machine-readable dial controls grammatical style:
-
-- `casual`: Short sentences, contractions, first names, warm sign-off.
-- `professional`: Clear sentences, plain-spoken, brief courteous sign-off.
-- `formal`: Full grammatical sentences, formal titles, polite sign-off.
-
-## 3. Gold Examples
-
-Gold examples (`BrandVoiceExample[]`) contain high-quality situation-reply pairs. The compiler embeds them so that the model mimics approved phrasing before improvising.
+The compiler is a pure helper. It does not call a model, send a message, or persist an agent thread.

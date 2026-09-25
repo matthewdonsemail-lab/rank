@@ -1,6 +1,6 @@
 # Convex Components Directory
 
-This directory contains complete documentation, API references, architecture guides, and schema definitions for the Convex components installed and active in the **Rank** project.
+This directory contains documentation for the Convex components mounted by the **Rank** project. The machine contracts in `docs/xstate/machines.md` define how the Agent and AgentMail boundaries participate in the current outbound workflow.
 
 ---
 
@@ -8,8 +8,8 @@ This directory contains complete documentation, API references, architecture gui
 
 | Component | Package | Version | Mount Point | Documentation | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Agent** | `@convex-dev/agent` | `^0.7.3` | `components.agent` | [agent/README.md](agent/README.md) | Autonomous AI agent workflows, persistent chat threads, tool execution, and websocket streaming deltas. |
-| **AgentMail** | `@agentmail/convex` | `^0.1.0` | `components.agentmail` | [agentmail/README.md](agentmail/README.md) | Stateful email inboxes, thread persistence, reactive inbound webhooks, and durable outbound delivery. |
+| **Agent** | `@convex-dev/agent` | `^0.7.3` | `components.agent` | [agent/README.md](agent/README.md) | Persistent reasoning threads for outbound reply analysis; currently backed by `mockModel`. |
+| **AgentMail** | `@agentmail/convex` | `^0.1.0` | `components.agentmail` | [agentmail/README.md](agentmail/README.md) | Transport, inbound labels, durable sending, and AgentMail lifecycle for outbound threads. |
 | **Firecrawl** | `@firecrawl/firecrawl-convex` | `0.1.1` | `components.firecrawl` | [Firecrawl crawl domain](../../../lib/firecrawl/crawl/README.md) | Scrape, map, search, and durable reactive website crawls. |
 | **Treg** | `@listeningkit/treg` | `^0.1.3` | `components.treg` | [treg/README.md](treg/README.md) | Server-side external tool calls, credential routing, and spend receipts. |
 

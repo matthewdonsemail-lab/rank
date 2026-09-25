@@ -24,7 +24,10 @@ flowchart LR
 
 ---
 
-## Code Example: Sending with Delivery Tracking
+## Rank integration contract
+
+`convex/email.ts` wraps this component with an application-level `outboundDeliveries` record. The wrapper requires an approved outbound state, reserves an idempotency key before enqueueing, adds an `outbound-thread:<id>` label, and leaves the machine in `sending` until a delivery callback records `SENT` or `FAIL`. The AgentMail component owns provider delivery status; Rank owns the conversation state.
+
 
 ```typescript
 import { mutation, query } from "./_generated/server.js";

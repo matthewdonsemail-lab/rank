@@ -1,82 +1,75 @@
-# Self-Hosting & Local Development Guide
+# Self-Hosting
 
-> Step-by-step instructions for running **Rank by ListeningKit** locally or deploying to production.
-
----
-
-## Prerequisites
-
-- **Node.js**: v20+ or v24+
-- **pnpm**: v9+ or v10+
-- **Nebius AI Studio API Key**: [studio.nebius.ai](https://studio.nebius.ai)
-- **TypeSafe AI API Key** *(optional, for System One evaluations)*: [typesafe.ai](https://typesafe.ai)
-- **Convex Account**: [convex.dev](https://convex.dev)
-
----
+These instructions cover the repository's current library, mock, and Convex development setup. They do not describe a production public API because that surface is not implemented yet.
 
 ## Local Setup
 
-### 1. Clone & Install
-
 ```bash
-git clone https://github.com/matthewdonsemail-lab/rank.git
-cd rank
 pnpm install
+Copy-Item .env.example .env.local
 ```
 
-### 2. Configure Environment
-
-Copy `.env.example` to `.env.local`:
-
-```bash
-cp .env.example .env.local
-```
-
-Populate the required credentials:
+Populate the credentials required by the workflows you intend to run:
 
 ```env
-# Nebius AI Studio
-NEBIUS_API_KEY=your_nebius_api_key_here
+NEBIUS_API_KEY=
 NEBIUS_BASE_URL=https://api.studio.nebius.ai/v1
-DEFAULT_RANK_MODEL=BAAI/bge-reranker-v2-m3
 
-# Optional: TypeSafe AI
-TYPESAFE_API_KEY=your_typesafe_key_here
+FIRECRAWL_API_KEY=
+TYPESAFE_API_KEY=
 TYPESAFE_BASE_URL=https://api.typesafe.ai
+TYPESAFE_DEFAULT_MODEL=jev-latest
 
-# Convex
-CONVEX_DEPLOYMENT=dev:your-deployment-name
-NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
-
-# Server
-PORT=3000
+TREG_TOKEN=
+CONVEX_DEPLOYMENT=dev:your-deployment
 ```
 
-### 3. Start Development Server
+`NebiusRerankClient` currently uses a deterministic local baseline. A Nebius key is not required for that baseline and does not enable remote model execution by itself.
+
+## Verify the Repository
 
 ```bash
-pnpm run dev
+pnpm test
+pnpm build
+pnpm mock:verify
+pnpm check:machines
+pnpm check:docs
 ```
 
-The service will start on `http://localhost:3000`.
+The mock server is a fixture server for the existing brand, ranking, Convex component, contact-resolution, outbound, provider-adapter, and Treg routes. It is not a production substitute for provider calls.
 
----
-
-## Running Tests
+## Convex Development
 
 ```bash
-pnpm run test
+pnpm convex:dev
 ```
 
----
+The current Convex workflows are:
 
-## Production Deployment
+- `convex/enrichment.ts`
+- `convex/competitorDiscovery.ts`
+- `convex/prospectEvaluation.ts`
+- `convex/outbound.ts`
+- `convex/agent.ts`
+- `convex/email.ts`
 
-The production deployment runs at **[rank.listeningkit.com](https://rank.listeningkit.com)**.
+Each action restores a versioned XState v6 machine, performs one external step, and persists the next state and serializable context.
 
-1. Set environment variables on your hosting provider (e.g. Vercel, Netlify, or custom VPS).
-2. Deploy backend functions to Convex:
-   ```bash
-   npx convex deploy
-   ```
-3. Set your custom domain (`rank.listeningkit.com`) in DNS pointing to your production deployment.
+## Provider Boundaries
+
+- Firecrawl credentials are used by the crawl wrapper and enrichment action.
+- Treg credentials are used by competitor discovery.
+- `TYPESAFE_API_KEY` is used by prospect evaluation.
+- `AGENTMAIL_API_KEY` and `AGENTMAIL_WEBHOOK_SECRET` are required only for live AgentMail transport and signed inbound webhooks.
+- The Agent component currently uses `mockModel`; a Nebius token-factory adapter is not configured.
+- Machine context must never contain provider clients, sockets, promises, or secrets.
+
+## Upgrading XState References
+
+The project is pinned to the published v6 alpha line:
+
+```bash
+pnpm docs:xstate
+```
+
+This downloads the authoritative Stately v6 pages with `curl.exe` into the ignored `docs/xstate/upstream/` directory. Project-specific machine contracts remain in `docs/xstate/machines.md` and are checked against source by the machine documentation hook.

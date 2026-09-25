@@ -9,6 +9,10 @@ pre-push:
       run: node scripts/check-no-font-mono.mjs
     - name: no tracking-* utilities (brand rule)
       run: node scripts/check-no-tracking.mjs
+    - name: machine contracts and documentation
+      run: node scripts/check-machine-docs.mjs
+    - name: project documentation is current
+      run: node scripts/check-project-docs.mjs
     - name: library and domain naming conventions
       run: node scripts/check-naming-conventions.mjs
     - name: no emojis (brand rule)

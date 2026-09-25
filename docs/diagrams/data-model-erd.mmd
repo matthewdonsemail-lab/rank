@@ -2,26 +2,32 @@ erDiagram
   WORKSPACE ||--o{ API_KEY : owns
   WORKSPACE ||--o{ RANK_SESSION : executes
   WORKSPACE ||--o{ BENCHMARK_RUN : tracks
-
   RANK_SESSION ||--|{ CANDIDATE : contains
-  RANK_SESSION ||--o{ RECEIPT : incurs
-  RANK_SESSION }|..|| MODEL_CONFIG : uses
+  RANK_SESSION ||--o{ RECEIPT : records
+
+  ENRICHMENT_RUN ||--o{ COMPETITOR_DISCOVERY_RUN : enables
+  COMPETITOR_DISCOVERY_RUN ||--o{ PROSPECT_EVALUATION : produces
+  OUTBOUND_THREAD ||--o{ CONTACT_RESOLUTION : validates
+  OUTBOUND_DOMAIN ||--o{ OUTBOUND_INBOX : provisions
+  OUTBOUND_CAMPAIGN ||--o{ OUTBOUND_THREAD : contains
+  OUTBOUND_THREAD ||--o{ OUTBOUND_DELIVERY : reserves
 
   WORKSPACE {
     string id PK
     string name
     string slug
+    string ownerId
     string plan
-    datetime createdAt
+    number createdAt
   }
 
   API_KEY {
     string id PK
     string workspaceId FK
-    string hashedSecret
+    string hashedKey
     string label
-    string[] scopes
-    datetime lastUsedAt
+    array scopes
+    number lastUsedAt
   }
 
   RANK_SESSION {
@@ -29,9 +35,10 @@ erDiagram
     string workspaceId FK
     string query
     string strategy
-    int candidateCount
-    float latencyMs
-    datetime createdAt
+    string model
+    number candidateCount
+    number latencyMs
+    number createdAt
   }
 
   CANDIDATE {
@@ -39,10 +46,10 @@ erDiagram
     string sessionId FK
     string externalId
     string text
-    float initialScore
-    float rerankScore
-    float confidence
-    int finalRank
+    number initialScore
+    number rerankScore
+    number confidence
+    number finalRank
   }
 
   RECEIPT {
@@ -50,26 +57,135 @@ erDiagram
     string sessionId FK
     string provider
     string model
-    int tokensUsed
-    float costUsd
-    datetime timestamp
-  }
-
-  MODEL_CONFIG {
-    string id PK
-    string provider
-    string modelId
-    float costPer1kTokens
-    int maxContextLength
-    boolean isDefault
+    number tokensUsed
+    number costUsd
+    number timestamp
   }
 
   BENCHMARK_RUN {
     string id PK
     string workspaceId FK
     string dataset
-    float ndcg10
-    float mrr
-    float avgLatencyMs
-    datetime completedAt
+    number ndcg10
+    number mrr
+    number avgLatencyMs
+    number completedAt
   }
+
+  BRAND {
+    string id PK
+    string owner
+    string sourceUrl
+    string name
+    string tagline
+    array offerings
+    number fetchedAt
+  }
+
+  FIRECRAWL_CRAWL {
+    string id PK
+    string owner
+    string crawlId
+    string url
+    string status
+    number pageCount
+    number createdAt
+    number updatedAt
+  }
+
+  ENRICHMENT_RUN {
+    string id PK
+    string owner
+    string sourceUrl
+    string state
+    object context
+    number createdAt
+    number updatedAt
+  }
+
+  COMPETITOR_DISCOVERY_RUN {
+    string id PK
+    string sourceEnrichmentRunId FK
+    string owner
+    string sourceDomain
+    string state
+    object context
+    number createdAt
+    number updatedAt
+  }
+
+   PROSPECT_EVALUATION {
+     string id PK
+     string sourceDiscoveryRunId FK
+     string owner
+     string url
+     string state
+     string action
+     number confidence
+     object context
+     number createdAt
+     number updatedAt
+   }
+
+   CONTACT_RESOLUTION {
+     string id PK
+     string owner
+     string state
+     object context
+     number createdAt
+     number updatedAt
+   }
+
+   OUTBOUND_DOMAIN {
+     string id PK
+     string owner
+     string domain
+     string status
+     array localPartPrefixes
+     number dailyLimit
+     number sentToday
+     number warmupScore
+   }
+
+   OUTBOUND_INBOX {
+     string id PK
+     string owner
+     string domain FK
+     string localPart
+     string address
+     string status
+     number dailyLimit
+     number sentToday
+   }
+
+   OUTBOUND_CAMPAIGN {
+     string id PK
+     string owner
+     string name
+     string goal
+     string status
+     number dailySendLimit
+   }
+
+   OUTBOUND_THREAD {
+     string id PK
+     string campaignId FK
+     string owner
+     string state
+     object context
+     string agentThreadId
+     string agentMailThreadId
+     string agentMailInboxId
+     array labels
+     number nextFollowUpAt
+   }
+
+   OUTBOUND_DELIVERY {
+     string id PK
+     string threadId FK
+     string owner
+     string idempotencyKey
+     string provider
+     string status
+     string providerMessageId
+   }

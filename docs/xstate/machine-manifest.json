@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "machines": [
+    {
+      "source": "lib/xstate/enrichment/machine.ts",
+      "test": "lib/xstate/enrichment/machine.test.ts",
+      "name": "brandEnrichmentMachine",
+      "id": "brand-enrichment",
+      "version": "1",
+      "states": [
+        "idle",
+        "mapping",
+        "scraping",
+        "extracting",
+        "failed",
+        "completed",
+        "cancelled"
+      ],
+      "events": [
+        "CANCEL",
+        "EXTRACT_FAILED",
+        "EXTRACT_SUCCEEDED",
+        "MAP_FAILED",
+        "MAP_SUCCEEDED",
+        "RETRY",
+        "SCRAPE_FAILED",
+        "SCRAPE_SUCCEEDED",
+        "START"
+      ],
+      "order": 0
+    },
+    {
+      "source": "lib/xstate/competitor-discovery/machine.ts",
+      "test": "lib/xstate/competitor-discovery/machine.test.ts",
+      "name": "competitorDiscoveryMachine",
+      "id": "competitor-discovery",
+      "version": "1",
+      "states": [
+        "idle",
+        "discovering",
+        "normalizing",
+        "failed",
+        "completed",
+        "cancelled"
+      ],
+      "events": [
+        "CANCEL",
+        "CANDIDATES_READY",
+        "COMPETITORS_RECEIVED",
+        "DISCOVERY_FAILED",
+        "NORMALIZATION_FAILED",
+        "RETRY",
+        "START"
+      ],
+      "order": 1
+    },
+    {
+      "source": "lib/xstate/prospect-evaluation/machine.ts",
+      "test": "lib/xstate/prospect-evaluation/machine.test.ts",
+      "name": "prospectEvaluationMachine",
+      "id": "prospect-evaluation",
+      "version": "1",
+      "states": [
+        "idle",
+        "evaluating",
+        "failed",
+        "completed",
+        "cancelled"
+      ],
+      "events": [
+        "CANCEL",
+        "EVALUATION_FAILED",
+        "JUDGMENT_READY",
+        "RETRY",
+        "START"
+      ],
+      "order": 2
+    },
+    {
+      "source": "lib/xstate/contact-resolution/machine.ts",
+      "test": "lib/xstate/contact-resolution/machine.test.ts",
+      "name": "contactResolutionMachine",
+      "id": "contact-resolution",
+      "version": "1",
+      "states": [
+        "idle",
+        "checking_domain",
+        "checking_contact",
+        "deliverable",
+        "needs_alternate",
+        "bounced",
+        "failed",
+        "cancelled"
+      ],
+      "events": [
+        "CANCEL",
+        "CONTACT_RESOLVED",
+        "CONTACT_UNRESOLVED",
+        "DELIVERY_BOUNCED",
+        "DOMAIN_UNUSABLE",
+        "DOMAIN_VERIFIED",
+        "FAIL",
+        "RETRY",
+        "START"
+      ],
+      "order": 3
+    },
+    {
+      "source": "lib/xstate/outbound/machine.ts",
+      "test": "lib/xstate/outbound/machine.test.ts",
+      "name": "outboundThreadMachine",
+      "id": "outboundThread",
+      "version": "1",
+      "states": [
+        "idle",
+        "drafting",
+        "review_required",
+        "ready_to_send",
+        "sending",
+        "awaiting_reply",
+        "analyzing_reply",
+        "follow_up_scheduled",
+        "follow_up_due",
+        "engaged",
+        "negotiating",
+        "scheduled",
+        "closed_won",
+        "closed_lost",
+        "failed",
+        "cancelled"
+      ],
+      "events": [
+        "ANALYSIS_READY",
+        "APPROVE",
+        "ASSIGN_INBOX",
+        "ATTACH_AGENTMAIL_THREAD",
+        "ATTACH_AGENT_THREAD",
+        "CANCEL",
+        "CLOSE_LOST",
+        "CLOSE_WON",
+        "DELIVERY_BOUNCED",
+        "DRAFT_READY",
+        "FAIL",
+        "FOLLOW_UP_DUE",
+        "FOLLOW_UP_SENT",
+        "GUEST_POST_SCHEDULED",
+        "NEGOTIATION_STARTED",
+        "REANALYZE",
+        "REPLY_RECEIVED",
+        "RETRY",
+        "SCHEDULE_FOLLOW_UP",
+        "SEND",
+        "SENT",
+        "START"
+      ],
+      "order": 3
+    }
+  ]
+}

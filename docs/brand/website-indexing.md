@@ -1,22 +1,18 @@
-# Website Indexing & Source Grounding
+# Website Indexing and Sources
 
-Brand sources represent indexed website pages (`BrandPage[]`) that back model responses, candidate matching, and quotation references.
+`BrandPage[]` records are the structured source list used by brand context helpers.
 
-## 1. Sitemap Resolution
+## Source operations
 
-`POST /api/brand/index` resolves pages from the website sitemap:
-- In mock mode, `seedSourcesFor(website, brandName)` deterministically seeds primary pages: Home, Services, About, and Contact.
-- In live mode, the official `@firecrawl/firecrawl-convex` component maps the site and the application stores the returned links.
-- Durable Firecrawl crawls are started through the authenticated `convex/firecrawl.ts` boundary and remain reactive through the component.
+- `BrandClient.indexSources()` appends explicit URLs or asks the configured sitemap boundary for candidates.
+- `BrandClient.getSources()` lists indexed pages.
+- `BrandClient.removeSource()` removes a page by exact URL.
+- `resolveSitemap()` and `seedSourcesFor()` provide the domain helpers used by the mock path and source indexing flow.
 
-## 2. Page Status States
+## Page status
 
-- `indexed`: Fully retrieved and available for keyword overlap ranking and citation.
-- `pending`: Registered URL awaiting scrape or map resolution.
-- `failed`: Errored page preserved without retry loop to protect scraping credits.
+- `indexed`: The page is available to source-reference helpers.
+- `pending`: The URL is registered but not yet available as indexed content.
+- `failed`: The page remains recorded with its failure state.
 
-## 3. Operations
-
-- `GET /api/brand/sources`: Lists all indexed pages.
-- `POST /api/brand/index`: Triggers sitemap resolution or appends explicit URL candidates.
-- `DELETE /api/brand/sources`: Removes an indexed page by exact URL.
+The Convex Firecrawl boundary is used by the enrichment machine. Source indexing and page extraction are separate operations, and the brand helpers do not assume that every page has been fetched.

@@ -17,6 +17,12 @@ import { handleGetAgentMessages, docBacking as agentMessagesDoc } from "./data/a
 import { handleGetAgentMailInboxes, docBacking as agentMailInboxesDoc } from "./data/agentmail-inboxes.ts";
 import { handleGetAgentMailThreads, docBacking as agentMailThreadsDoc } from "./data/agentmail-threads.ts";
 import { handleGetAgentMailMessages, docBacking as agentMailMessagesDoc } from "./data/agentmail-messages.ts";
+import { docBacking as outboundDomainsDoc } from "./data/outreach-domains.ts";
+import { docBacking as outboundInboxesDoc } from "./data/outreach-inboxes.ts";
+import { docBacking as outboundCampaignsDoc } from "./data/outreach-campaigns.ts";
+import { docBacking as outboundThreadsDoc } from "./data/outreach-threads.ts";
+import { docBacking as outboundProvidersDoc, handleMockOutboundAnalysis, buildMockOutboundDraft } from "./data/outbound-providers.ts";
+import { docBacking as contactResolutionDoc } from "./data/outreach-contact-resolution.ts";
 import { handleGetTregTools, docBacking as tregToolsDoc } from "./data/treg-tools.ts";
 import { handleGetTregCalls, docBacking as tregCallsDoc } from "./data/treg-calls.ts";
 import { handlePostTregExecute, docBacking as tregExecuteDoc } from "./data/treg-execute.ts";
@@ -25,6 +31,8 @@ import { docBacking as brandSourcesDoc } from "./data/brand-sources.ts";
 import { docBacking as brandIntelDoc } from "./data/brand-intelligence.ts";
 import { mockStore } from "./store.ts";
 import { wrapWithDocBacking } from "./validator.ts";
+import type { ContactResolutionEvent } from "../lib/xstate/contact-resolution/index.js";
+import type { OutboundThreadEvent } from "../lib/xstate/outbound/index.js";
 import type { RankInferenceRequest, TregExecuteRequest, DocBackingMetadata } from "./schema.ts";
 
 const DEFAULT_PORT = 3002;
@@ -220,6 +228,315 @@ export function createMockServer() {
         return respondWithDocCheck(res, 200, handleGetAgentMailMessages(query.threadId), agentMailMessagesDoc, verifyDocBacking);
       }
 
+      if (pathname === "/api/outbound/contact-resolutions" && req.method === "GET") {
+        return respondWithDocCheck(
+          res,
+          200,
+          mockStore.getContactResolutions(query.owner, query.state),
+          contactResolutionDoc,
+          verifyDocBacking,
+        );
+      }
+      if (pathname === "/api/outbound/contact-resolutions" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        if (!owner || !body.domain || !body.candidateEmail || !body.contactName || !body.publicationUrl) {
+          return sendJson(res, 400, { error: "owner and contact resolution fields are required" });
+        }
+        const created = mockStore.insertContactResolution({
+          owner,
+          outboundThreadId: typeof body.outboundThreadId === "string" ? body.outboundThreadId : undefined,
+          domain: String(body.domain),
+          candidateEmail: String(body.candidateEmail),
+          contactName: String(body.contactName),
+          publicationUrl: String(body.publicationUrl),
+        });
+        return respondWithDocCheck(res, 201, { resolution: created }, contactResolutionDoc, verifyDocBacking);
+      }
+      const contactResolutionMatch = pathname.match(/^\/api\/outbound\/contact-resolutions\/([^/]+)$/);
+      if (contactResolutionMatch && req.method === "GET") {
+        const resolution = mockStore.getContactResolution(contactResolutionMatch[1]);
+        if (!resolution) return sendJson(res, 404, { error: "Contact resolution not found" });
+        return respondWithDocCheck(res, 200, { resolution }, contactResolutionDoc, verifyDocBacking);
+      }
+      const contactResolutionEventMatch = pathname.match(/^\/api\/outbound\/contact-resolutions\/([^/]+)\/events$/);
+      if (contactResolutionEventMatch && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const resolution = mockStore.getContactResolution(contactResolutionEventMatch[1]);
+        if (!resolution) return sendJson(res, 404, { error: "Contact resolution not found" });
+        if (body.owner && String(body.owner) !== resolution.owner) {
+          return sendJson(res, 403, { error: "Owner mismatch" });
+        }
+        const event = (body.event ?? body) as ContactResolutionEvent;
+        const updated = mockStore.transitionContactResolution(resolution.id, event);
+        return respondWithDocCheck(res, 200, { resolution: updated }, contactResolutionDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/domains" && req.method === "GET") {
+        return respondWithDocCheck(
+          res,
+          200,
+          mockStore.getOutboundDomains(query.owner, query.status),
+          outboundDomainsDoc,
+          verifyDocBacking,
+        );
+      }
+      if (pathname === "/api/outbound/domains" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const domain = String(body.domain || "");
+        if (!owner || !domain) return sendJson(res, 400, { error: "owner and domain are required" });
+        const created = mockStore.insertOutboundDomain({
+          owner,
+          domain,
+          localPartPrefixes: Array.isArray(body.localPartPrefixes)
+            ? body.localPartPrefixes.map(String)
+            : undefined,
+          dailyLimit: typeof body.dailyLimit === "number" ? body.dailyLimit : undefined,
+        });
+        return respondWithDocCheck(res, 201, { domain: created }, outboundDomainsDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/inboxes/provision" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const domain = String(body.domain || "");
+        const userName = String(body.userName || "");
+        if (!owner || !domain || !userName) {
+          return sendJson(res, 400, { error: "owner, domain, and userName are required" });
+        }
+        const prefixes = [userName, ...(Array.isArray(body.additionalPrefixes) ? body.additionalPrefixes.map(String) : [])];
+        const inboxes = prefixes.map((prefix) =>
+          mockStore.insertOutboundInbox({
+            owner,
+            domain,
+            localPart: prefix,
+            dailyLimit: typeof body.dailyLimit === "number" ? body.dailyLimit : undefined,
+          }),
+        );
+        return respondWithDocCheck(res, 201, { inboxes }, outboundInboxesDoc, verifyDocBacking);
+      }
+      if (pathname === "/api/outbound/inboxes" && req.method === "GET") {
+        return respondWithDocCheck(
+          res,
+          200,
+          mockStore.getOutboundInboxes(query.owner, query.status, query.domain),
+          outboundInboxesDoc,
+          verifyDocBacking,
+        );
+      }
+      if (pathname === "/api/outbound/inboxes" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const domain = String(body.domain || "");
+        const localPart = String(body.localPart || "");
+        if (!owner || !domain || !localPart) {
+          return sendJson(res, 400, { error: "owner, domain, and localPart are required" });
+        }
+        const created = mockStore.insertOutboundInbox({
+          owner,
+          domain,
+            localPart,
+            agentMailInboxId: typeof body.agentMailInboxId === "string" ? body.agentMailInboxId : undefined,
+            displayName: typeof body.displayName === "string" ? body.displayName : undefined,
+          dailyLimit: typeof body.dailyLimit === "number" ? body.dailyLimit : undefined,
+        });
+        return respondWithDocCheck(res, 201, { inbox: created }, outboundInboxesDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/campaigns" && req.method === "GET") {
+        return respondWithDocCheck(
+          res,
+          200,
+          mockStore.getOutboundCampaigns(query.owner, query.status),
+          outboundCampaignsDoc,
+          verifyDocBacking,
+        );
+      }
+      if (pathname === "/api/outbound/campaigns" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const name = String(body.name || "");
+        if (!owner || !name) return sendJson(res, 400, { error: "owner and name are required" });
+        const created = mockStore.insertOutboundCampaign({
+          owner,
+          name,
+          dailySendLimit: typeof body.dailySendLimit === "number" ? body.dailySendLimit : undefined,
+        });
+        return respondWithDocCheck(res, 201, { campaign: created }, outboundCampaignsDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/threads" && req.method === "GET") {
+        return respondWithDocCheck(
+          res,
+          200,
+          mockStore.getOutboundThreads({
+            owner: query.owner,
+            campaignId: query.campaignId,
+            state: query.state,
+          }),
+          outboundThreadsDoc,
+          verifyDocBacking,
+        );
+      }
+      if (pathname === "/api/outbound/threads" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const campaignId = String(body.campaignId || "");
+        const campaign = mockStore.getOutboundCampaigns(owner).find((item) => item.id === campaignId);
+        if (!owner || !campaign) return sendJson(res, 404, { error: "Campaign not found" });
+        const prospect = body.prospect as Record<string, unknown>;
+        const brand = body.brand as Record<string, unknown>;
+        if (!prospect || !brand) {
+          return sendJson(res, 400, { error: "prospect and brand are required" });
+        }
+        const created = mockStore.insertOutboundThread({
+          owner,
+          campaignId,
+          prospect: {
+            name: String(prospect.name || ""),
+            email: String(prospect.email || ""),
+            url: String(prospect.url || ""),
+            publication: String(prospect.publication || ""),
+            fitRationale: String(prospect.fitRationale || ""),
+          },
+          brand: {
+            name: String(brand.name || ""),
+            voice: String(brand.voice || ""),
+            guestPostAngle: String(brand.guestPostAngle || ""),
+          },
+        });
+        return respondWithDocCheck(res, 201, { thread: created }, outboundThreadsDoc, verifyDocBacking);
+      }
+
+      const outboundThreadMatch = pathname.match(/^\/api\/outbound\/threads\/([^/]+)$/);
+      if (outboundThreadMatch && req.method === "GET") {
+        const thread = mockStore.getOutboundThread(outboundThreadMatch[1]);
+        if (!thread) return sendJson(res, 404, { error: "Outbound thread not found" });
+        return respondWithDocCheck(res, 200, { thread }, outboundThreadsDoc, verifyDocBacking);
+      }
+
+      const outboundAssignInboxMatch = pathname.match(/^\/api\/outbound\/threads\/([^/]+)\/assign-inbox$/);
+      if (outboundAssignInboxMatch && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const thread = mockStore.getOutboundThread(outboundAssignInboxMatch[1]);
+        if (!thread) return sendJson(res, 404, { error: "Outbound thread not found" });
+        if (body.owner && String(body.owner) !== thread.owner) return sendJson(res, 403, { error: "Owner mismatch" });
+        const selected = mockStore.selectOutboundInbox(thread.owner, body.preferredDomain ? String(body.preferredDomain) : undefined);
+        if (!selected) return sendJson(res, 409, { error: "No healthy shared inbox is available" });
+        const updated = mockStore.transitionOutboundThread(thread.id, {
+          type: "ASSIGN_INBOX",
+          at: Date.now(),
+          inboxId: selected.agentMailInboxId ?? selected.id,
+        });
+        return respondWithDocCheck(res, 200, { thread: updated }, outboundThreadsDoc, verifyDocBacking);
+      }
+
+      const outboundEventMatch = pathname.match(/^\/api\/outbound\/threads\/([^/]+)\/events$/);
+      if (outboundEventMatch && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const thread = mockStore.getOutboundThread(outboundEventMatch[1]);
+        if (!thread) return sendJson(res, 404, { error: "Outbound thread not found" });
+        if (body.owner && String(body.owner) !== thread.owner) {
+          return sendJson(res, 403, { error: "Owner mismatch" });
+        }
+        const event = (body.event ?? body) as OutboundThreadEvent;
+        const updated = mockStore.transitionOutboundThread(thread.id, event);
+        return respondWithDocCheck(res, 200, { thread: updated }, outboundThreadsDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/deliveries" && req.method === "GET") {
+        return sendJson(res, 200, {
+          deliveries: mockStore.getOutboundDeliveries(query.owner, query.threadId),
+        });
+      }
+      if (pathname === "/api/outbound/deliveries" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const threadId = String(body.threadId || "");
+        const idempotencyKey = String(body.idempotencyKey || "");
+        if (!owner || !threadId || !idempotencyKey) {
+          return sendJson(res, 400, { error: "owner, threadId, and idempotencyKey are required" });
+        }
+        const existing = mockStore.getOutboundDeliveries(owner).find(
+          (delivery) => delivery.idempotencyKey === idempotencyKey,
+        );
+        if (existing) return sendJson(res, 200, { delivery: existing, duplicate: true });
+        const delivery = mockStore.insertOutboundDelivery({
+          id: `outbound_delivery_${Date.now()}`,
+          owner,
+          threadId,
+          idempotencyKey,
+          provider: String(body.provider || "agentmail"),
+          status: "reserved",
+          attemptedAt: Date.now(),
+        });
+        return sendJson(res, 201, { delivery, duplicate: false });
+      }
+
+      if (pathname === "/api/outbound/pool/select" && req.method === "GET") {
+        const owner = query.owner || "usr_rank_01";
+        return sendJson(res, 200, { inbox: mockStore.selectOutboundInbox(owner, query.domain) });
+      }
+
+      if (pathname === "/api/outbound/pool" && req.method === "GET") {
+        return sendJson(res, 200, {
+          domains: mockStore.getOutboundDomains(query.owner, "verified"),
+          inboxes: mockStore.getOutboundInboxes(query.owner, "active"),
+        });
+      }
+
+      if (pathname === "/api/outbound/agent/analyze" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const prospect = body.prospect as Record<string, unknown>;
+        const brand = body.brand as Record<string, unknown>;
+        if (!prospect || !brand) return sendJson(res, 400, { error: "prospect and brand are required" });
+        const result = await handleMockOutboundAnalysis({
+          goal: "guest_post",
+          brand: {
+            name: String(brand.name || "Rank"),
+            voice: String(brand.voice || "direct and useful"),
+            guestPostAngle: String(brand.guestPostAngle || "A practical guest-post idea"),
+          },
+          prospect: {
+            name: String(prospect.name || "Editor"),
+            email: String(prospect.email || ""),
+            url: String(prospect.url || ""),
+            publication: String(prospect.publication || "Publication"),
+            fitRationale: String(prospect.fitRationale || ""),
+          },
+          replyText: String(body.replyText || ""),
+          confidence: typeof body.confidence === "number" ? body.confidence : 0.5,
+          dealLikelihood: typeof body.dealLikelihood === "number" ? body.dealLikelihood : 0.3,
+        });
+        return respondWithDocCheck(res, 200, result, outboundProvidersDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/agentmail/provision-inbox" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const owner = String(body.owner || "");
+        const localPart = String(body.localPart || "");
+        const domain = String(body.domain || "");
+        if (!owner || !localPart || !domain) return sendJson(res, 400, { error: "owner, localPart, and domain are required" });
+        const inbox = mockStore.insertOutboundInbox({
+          owner,
+          localPart,
+          domain,
+          agentMailInboxId: `inbox_mock_${Date.now()}`,
+        });
+        return respondWithDocCheck(res, 201, { inbox }, outboundInboxesDoc, verifyDocBacking);
+      }
+
+      if (pathname === "/api/outbound/agentmail/draft" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const draft = buildMockOutboundDraft({
+          to: String(body.to || "editor@example.com"),
+          brandVoice: String(body.brandVoice || "Rank"),
+          guestPostAngle: String(body.guestPostAngle || "a practical guide"),
+        });
+        return respondWithDocCheck(res, 200, { draft }, outboundProvidersDoc, verifyDocBacking);
+      }
+
       // 10. Treg Developer Tools routes
       if (pathname === "/api/treg/tools") {
         return respondWithDocCheck(res, 200, handleGetTregTools(query), tregToolsDoc, verifyDocBacking);
@@ -297,6 +614,23 @@ export function createMockServer() {
           "/api/agentmail/inboxes",
           "/api/agentmail/threads",
           "/api/agentmail/messages",
+          "/api/outbound/contact-resolutions",
+          "/api/outbound/contact-resolutions/:id",
+          "/api/outbound/contact-resolutions/:id/events",
+          "/api/outbound/domains",
+          "/api/outbound/inboxes",
+          "/api/outbound/inboxes/provision",
+          "/api/outbound/campaigns",
+          "/api/outbound/threads",
+          "/api/outbound/threads/:id",
+          "/api/outbound/threads/:id/events",
+          "/api/outbound/threads/:id/assign-inbox",
+          "/api/outbound/deliveries",
+          "/api/outbound/pool",
+          "/api/outbound/pool/select",
+          "/api/outbound/agent/analyze",
+          "/api/outbound/agentmail/provision-inbox",
+          "/api/outbound/agentmail/draft",
           "/api/treg/tools",
           "/api/treg/calls",
           "/api/treg/call",
