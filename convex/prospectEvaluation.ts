@@ -1,7 +1,7 @@
 import { createActor } from "xstate";
 import type { GenericActionCtx, GenericQueryCtx } from "convex/server";
 import { ConvexError, v, type GenericId } from "convex/values";
-import { normalizeCrawlUrl } from "../lib/firecrawl/crawl/index.js";
+import { FirecrawlCrawlClient, mapWithConcurrency, normalizeCrawlUrl, summarizePage } from "../lib/firecrawl/crawl/index.js";
 import { NebiusRerankClient, rankCandidates, type BrandFacts } from "../lib/nebius/rerank/index.js";
 import { TypeSafeEvaluator } from "../lib/typesafe/evaluator/index.js";
 import type {
@@ -15,7 +15,7 @@ import {
   type ProspectEvaluationState,
 } from "../lib/xstate/prospect-evaluation/index.js";
 import type { DataModel } from "./_generated/dataModel.js";
-import { internal } from "./_generated/api.js";
+import { components, internal } from "./_generated/api.js";
 import { action, internalMutation, internalQuery, query } from "./_generated/server.js";
 import { requireOwner } from "./lib/server.js";
 
@@ -551,10 +551,49 @@ function brandSummary(brand: BrandFacts): string {
   return [brand.name, brand.tagline, offers ? `Offers: ${offers}` : ""].filter(Boolean).join(". ").slice(0, 500);
 }
 
+const firecrawl = FirecrawlCrawlClient.fromComponent(components.firecrawl);
+
+/** At most this many homepages are read per run (one Firecrawl credit each), and this many at once. */
+const MAX_HOMEPAGES = 25;
+const HOMEPAGE_CONCURRENCY = 5;
+const HOMEPAGE_TIMEOUT_MS = 20_000;
+/** Candidates beyond this stay in discovery order and are not ranked. */
+const MAX_RANKED = 50;
+
+type CandidatePage = { title: string | null; description: string | null; excerpt: string | null };
+
+/**
+ * Read each candidate's homepage so the reranker and TypeSafe judge what the site says, not just its domain. A page
+ * that cannot be read (blocked, slow, no such site) is left out and that candidate is ranked on discovery data alone.
+ * The returned array lines up with `domains`.
+ */
+async function fetchHomepages(ctx: EvaluationActionContext, domains: string[]): Promise<(CandidatePage | null)[]> {
+  const pages = await mapWithConcurrency(domains, HOMEPAGE_CONCURRENCY, async (domain): Promise<CandidatePage | null> => {
+    const normalized = normalizeCrawlUrl(domain);
+    if (!normalized.ok) return null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const document = await Promise.race([
+        firecrawl.scrape(ctx, normalized.url, { formats: ["markdown"], onlyMainContent: true }),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Homepage read timed out")), HOMEPAGE_TIMEOUT_MS);
+        }),
+      ]);
+      const summary = summarizePage(document);
+      return summary.title || summary.description || summary.excerpt ? summary : null;
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  });
+  return domains.map((_, index) => pages[index] ?? null);
+}
+
 export const startCompetitorProspectEvaluations = action({
   args: {
     sourceDiscoveryRunId: v.id("competitorDiscoveryRuns"),
     limit: v.optional(v.number()),
+    /** Read each candidate's homepage before ranking (default true). Costs one Firecrawl credit per page. */
+    readHomepages: v.optional(v.boolean()),
   },
   returns: v.array(prospectEvaluationSummaryValidator),
   handler: async (ctx, args) => {
@@ -586,10 +625,17 @@ export const startCompetitorProspectEvaluations = action({
     // are the most relevant ones rather than the first ones discovery returned. If ranking cannot run, discovery order
     // is kept and the reason is stored on each prospect.
     const brand = await loadBrandFacts(ctx, source.context.sourceEnrichmentRunId, owner);
+    const toRank = source.context.normalizedCandidates.slice(0, MAX_RANKED);
+    const pages: (CandidatePage | null)[] = args.readHomepages === false
+      ? toRank.map(() => null)
+      : [
+          ...(await fetchHomepages(ctx, toRank.slice(0, MAX_HOMEPAGES).map((c) => c.domain))),
+          ...toRank.slice(MAX_HOMEPAGES).map(() => null),
+        ];
     const { ranked, rank } = await rankCandidates(
       process.env.NEBIUS_API_KEY ? new NebiusRerankClient() : null,
       brand,
-      source.context.normalizedCandidates,
+      toRank.map((candidate, index) => ({ ...candidate, page: pages[index] })),
       limit,
     );
 
@@ -597,14 +643,17 @@ export const startCompetitorProspectEvaluations = action({
 
     const rows: ProspectEvaluationRow[] = [];
     for (const { candidate, rerankScore } of ranked) {
+      const { page } = candidate;
       const normalized = normalizeCrawlUrl(candidate.domain);
       if (!normalized.ok) continue;
       const prospect: LinkProspect = {
         url: normalized.url,
-        title: candidate.name,
+        title: candidate.name ?? page?.title ?? null,
         sourceDomain: candidate.domain,
         targetDomain: source.context.sourceDomain,
         fitRationale: `Discovered through ${candidate.sourceEndpoint}`,
+        ...(page?.description ? { description: page.description } : {}),
+        ...(page?.excerpt ? { content: page.excerpt } : {}),
         ...(brand ? { brandSummary: brandSummary(brand) } : {}),
         metrics: {
           rank: candidate.rank,
@@ -612,6 +661,7 @@ export const startCompetitorProspectEvaluations = action({
           sourceEndpoint: candidate.sourceEndpoint,
           rerankScore,
           rerankStatus: rank.status,
+          homepageRead: page !== null && page !== undefined,
         },
       };
       const startedAt = Date.now();

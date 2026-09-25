@@ -26,4 +26,5 @@ export type {
 } from "./types.js";
 
 export { FirecrawlCrawlClient } from "./client.js";
-export { isTerminalCrawlStatus, normalizeCrawlUrl } from "./helpers/index.js";
+export { isTerminalCrawlStatus, normalizeCrawlUrl, summarizePage, mapWithConcurrency, MAX_EXCERPT } from "./helpers/index.js";
+export type { PageSummary, SummarizablePage } from "./helpers/index.js";

@@ -14,6 +14,8 @@ export interface RankableCandidate {
   rank: number | null;
   commonTerms: number | null;
   sourceEndpoint: string;
+  /** What the candidate's own homepage says, when it has been read. Ranks far better than the discovery data alone. */
+  page?: { title: string | null; description: string | null; excerpt: string | null } | null;
 }
 
 /** Anything that can rerank: the Nebius client, or a stand-in in tests. */
@@ -40,15 +42,22 @@ export function buildBrandQuery(brand: BrandFacts): string {
     .slice(0, MAX_QUERY_CHARS);
 }
 
+/** A document is cut to this many characters: the reranker reads it together with the query, so length costs every pair. */
+const MAX_DOCUMENT_CHARS = 1200;
+
 /**
- * The text the reranker reads for one candidate. Discovery gives a domain, a name and how it was found, not the page
- * itself, so this is thin; a scraped description or page excerpt would rank better and should be added here when a
- * candidate has one.
+ * The text the reranker reads for one candidate: its name and domain, what its homepage says when that has been read,
+ * and how many search terms it shares with the brand. Without homepage text this is thin (discovery gives a domain,
+ * a name and how it was found), which is why the page is worth reading first.
  */
 export function candidateDocument(candidate: RankableCandidate): string {
   const parts = [`${candidate.name ?? candidate.domain} (${candidate.domain}).`];
+  const page = candidate.page;
+  if (page?.title && page.title !== candidate.name) parts.push(page.title + '.');
+  if (page?.description) parts.push(page.description);
+  if (page?.excerpt) parts.push(page.excerpt);
   if (candidate.commonTerms !== null) parts.push(`Ranks for ${candidate.commonTerms} of the same search terms as the brand.`);
-  return parts.join(' ');
+  return parts.join(' ').slice(0, MAX_DOCUMENT_CHARS);
 }
 
 export type RankStatus =

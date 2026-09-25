@@ -39,6 +39,15 @@ describe('brand query and candidate documents', () => {
     expect(candidateDocument(candidates[0])).toBe('A (a.com). Ranks for 40 of the same search terms as the brand.');
     expect(candidateDocument(candidates[1])).toBe('b.com (b.com).');
   });
+
+  it('adds what the homepage says, and cuts a long document', () => {
+    const page = { title: 'A | Tools', description: 'Tools for listening.', excerpt: 'We help teams find customers.' };
+    const doc = candidateDocument({ ...candidates[0], page });
+    expect(doc).toBe('A (a.com). A | Tools. Tools for listening. We help teams find customers. Ranks for 40 of the same search terms as the brand.');
+    const huge = candidateDocument({ ...candidates[0], page: { title: null, description: null, excerpt: 'w '.repeat(2000) } });
+    expect(huge.length).toBeLessThanOrEqual(1200);
+    expect(candidateDocument({ ...candidates[0], page: { title: 'A', description: null, excerpt: null } })).not.toContain('A. A.');
+  });
 });
 
 describe('rankCandidates', () => {
