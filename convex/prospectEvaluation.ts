@@ -2,6 +2,7 @@ import { createActor } from "xstate";
 import type { GenericActionCtx, GenericQueryCtx } from "convex/server";
 import { ConvexError, v, type GenericId } from "convex/values";
 import { normalizeCrawlUrl } from "../lib/firecrawl/crawl/index.js";
+import { NebiusRerankClient, rankCandidates, type BrandFacts } from "../lib/nebius/rerank/index.js";
 import { TypeSafeEvaluator } from "../lib/typesafe/evaluator/index.js";
 import type {
   LinkProspect,
@@ -535,6 +536,21 @@ export const startProspectEvaluation = action({
   },
 });
 
+/** The brand facts the enrichment run read from the brand's own site, or null when there are none to rank against. */
+async function loadBrandFacts(ctx: EvaluationActionContext, enrichmentRunId: string, owner: string): Promise<BrandFacts | null> {
+  const run = (await ctx.runQuery(internal.enrichment.getOwnedRun, {
+    runId: enrichmentRunId as GenericId<"enrichmentRuns">,
+    owner,
+  })) as { context: { facts: BrandFacts | null } } | null;
+  return run?.context.facts ?? null;
+}
+
+/** One line telling TypeSafe who the brand is, so it judges a prospect against the brand and not in the abstract. */
+function brandSummary(brand: BrandFacts): string {
+  const offers = (brand.offerings ?? []).slice(0, 4).map((o) => o.name).join(", ");
+  return [brand.name, brand.tagline, offers ? `Offers: ${offers}` : ""].filter(Boolean).join(". ").slice(0, 500);
+}
+
 export const startCompetitorProspectEvaluations = action({
   args: {
     sourceDiscoveryRunId: v.id("competitorDiscoveryRuns"),
@@ -550,6 +566,7 @@ export const startCompetitorProspectEvaluations = action({
       state: string;
       context: {
         sourceDomain: string;
+        sourceEnrichmentRunId: string;
         normalizedCandidates: Array<{
           domain: string;
           name: string | null;
@@ -564,8 +581,22 @@ export const startCompetitorProspectEvaluations = action({
     }
 
     const limit = Math.min(Math.max(args.limit ?? 10, 1), 25);
+
+    // Rank every discovered candidate against the brand before spending TypeSafe calls, so the `limit` that get judged
+    // are the most relevant ones rather than the first ones discovery returned. If ranking cannot run, discovery order
+    // is kept and the reason is stored on each prospect.
+    const brand = await loadBrandFacts(ctx, source.context.sourceEnrichmentRunId, owner);
+    const { ranked, rank } = await rankCandidates(
+      process.env.NEBIUS_API_KEY ? new NebiusRerankClient() : null,
+      brand,
+      source.context.normalizedCandidates,
+      limit,
+    );
+
+    if (rank.status !== "ranked") console.log(`prospect ranking ${rank.status}: ${rank.reason}`);
+
     const rows: ProspectEvaluationRow[] = [];
-    for (const candidate of source.context.normalizedCandidates.slice(0, limit)) {
+    for (const { candidate, rerankScore } of ranked) {
       const normalized = normalizeCrawlUrl(candidate.domain);
       if (!normalized.ok) continue;
       const prospect: LinkProspect = {
@@ -574,10 +605,13 @@ export const startCompetitorProspectEvaluations = action({
         sourceDomain: candidate.domain,
         targetDomain: source.context.sourceDomain,
         fitRationale: `Discovered through ${candidate.sourceEndpoint}`,
+        ...(brand ? { brandSummary: brandSummary(brand) } : {}),
         metrics: {
           rank: candidate.rank,
           commonTerms: candidate.commonTerms,
           sourceEndpoint: candidate.sourceEndpoint,
+          rerankScore,
+          rerankStatus: rank.status,
         },
       };
       const startedAt = Date.now();

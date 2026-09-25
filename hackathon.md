@@ -11,9 +11,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T07:30:00Z
+- **Last updated:** 2026-09-25T08:30:00Z
 
 ## Log
+
+### 2026-09-25 - rerank wired into prospect evaluation (Mandeep)
+`startCompetitorProspectEvaluations` in `convex/prospectEvaluation.ts` now ranks discovered competitor candidates against the brand with `NebiusRerankClient` before spending TypeSafe calls, so the `limit` that get judged are the most relevant instead of the first ones discovery returned. New `lib/nebius/rerank/helpers/prospect-ranking.ts` builds the query from the enrichment brand facts, builds a document per candidate, and `rankCandidates` orders and trims them. When ranking cannot run (no `NEBIUS_API_KEY`, no brand facts, fewer than two candidates, or a Nebius error) it keeps discovery order and records `metrics.rerankStatus` and a log line, so an unranked list is never passed off as ranked. Each prospect also now carries a `brandSummary` so Jev judges it against the brand. 6 new vitest tests with a stand-in reranker. Not run end to end and the Convex file was not type checked here (dependencies could not be installed under the pnpm release-age policy); candidate text is thin (name, domain, shared terms) until page text is scraped.
 
 ### 2026-09-25 - real Nebius rerank client (Mandeep)
 Replaced the placeholder in `lib/nebius/rerank/client.ts` (it scored candidates 1/(index+1) and ignored the query) with a client for Nebius Token Factory `POST https://api.tokenfactory.nebius.com/v1/rerank`, taken from Nebius's own OpenAPI spec. The old default base URL (`api.studio.nebius.ai`) and the `BAAI/bge-reranker-v2-m3` default were not what Nebius documents; the default model is now `Qwen/Qwen3-Reranker-8B`, the one in the spec, and `DEFAULT_RANK_MODEL` overrides it. The client maps scores back onto candidates by index, sorts best first, applies `topK`, validates every field it uses, retries 408/429/5xx and network failures, and raises `NebiusError` with plain-language messages that never include the key or the response body. It throws without `NEBIUS_API_KEY` instead of returning an unranked list. The old behaviour is kept only as `baselineRank`, clearly labelled as not a relevance model. `rerankDetailed()` also returns the model and token usage. 11 vitest tests with a fake fetch, not yet run against the live API (no Nebius key set). Updated README, features, self-hosting, agent tools and naming docs to say exactly that.

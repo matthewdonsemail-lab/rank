@@ -18,5 +18,13 @@ export {
   calculateRrfScore,
   mergeRankings,
   baselineRank,
+  buildBrandQuery,
+  candidateDocument,
+  rankCandidates,
   DEFAULT_RRF_K,
+  type BrandFacts,
+  type RankableCandidate,
+  type RankedCandidate,
+  type RankStatus,
+  type Reranker,
 } from './helpers/index.js';

@@ -13,6 +13,8 @@ active states → cancelled
 
 The Convex action restores the prospect, calls `TypeSafeEvaluator.judgeProspect()`, and sends `JUDGMENT_READY` or `EVALUATION_FAILED`. The persisted judgment is one of `act`, `review`, or `drop`; dropped records remain available for audit.
 
+`startCompetitorProspectEvaluations` ranks the discovered candidates before it judges any of them: it loads the brand facts from the source enrichment run, reranks every candidate with `NebiusRerankClient`, and evaluates only the best `limit` (default 10, at most 25). Each prospect stores `metrics.rerankScore` and `metrics.rerankStatus` (`ranked`, `skipped` or `failed`). Without `NEBIUS_API_KEY`, without brand facts, or when Nebius fails, the candidates keep discovery order and the status says so. The candidate text the reranker reads is only the name, domain and shared-term count, so scraped page text would improve the ranking.
+
 The context contains the owner, optional discovery run ID, prospect payload, judgment, error, attempt count, and timestamps. Provider clients and secrets never enter context.
 
 ## Entry points
