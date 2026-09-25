@@ -11,9 +11,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T09:30:00Z
+- **Last updated:** 2026-09-25T09:50:00Z
 
 ## Log
+
+### 2026-09-25 - pipeline diagram (Mandeep)
+Rewrote `docs/diagrams/ranking-pipeline.mmd`, which still described the old local baseline, to show the real flow from enrichment and discovery through homepage reads, Nebius reranking with its fallback, and TypeSafe judgment to the prospect queues. Updated the diagrams README to match.
 
 ### 2026-09-25 - homepage reading before ranking (Mandeep)
 `startCompetitorProspectEvaluations` now reads each candidate's homepage with Firecrawl before ranking (`readHomepages` argument, default on, off with `false`): at most 25 pages per run, 5 at a time, 20 seconds each, one Firecrawl credit per page, and up to 50 candidates are ranked. New pure helpers in `lib/firecrawl/crawl/helpers`: `summarizePage` (title, description, and an excerpt of real prose with links, images, headings marks, menus and cookie lines removed) and `mapWithConcurrency` (ordered results, a concurrency cap, and one failing item cannot stop the batch). `candidateDocument` now feeds the reranker the page title, description and excerpt, cut to 1200 characters. The description and excerpt are also stored on each prospect so TypeSafe judges what the site says, and `metrics.homepageRead` records whether the page was read. A page that cannot be read is ranked on discovery data alone. 7 new tests; still not run end to end and the Convex file is still not type checked here.

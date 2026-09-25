@@ -1,8 +1,22 @@
 flowchart TD
-  INPUT["Candidates and brand context"] --> RERANK["NebiusRerankClient<br/>current deterministic local baseline"]
-  RERANK --> NORMALIZE["normalizeScores"]
-  NORMALIZE --> RESULT["RerankResult[]"]
+  SITE["Brand website"] --> ENRICH["brandEnrichmentMachine<br/>Firecrawl reads the site<br/>name, tagline, offerings"]
+  ENRICH --> DISCOVER["competitorDiscoveryMachine<br/>Treg finds competitor domains<br/>and shared search terms"]
 
-  PROSPECT["Link prospect"] --> TYPESAFE["TypeSafeEvaluator<br/>/v1/systemone"]
-  TYPESAFE --> JUDGMENT["ProspectJudgment<br/>act | review | drop"]
-  JUDGMENT --> QUEUE["Convex prospect queues"]
+  subgraph EVAL["startCompetitorProspectEvaluations (convex/prospectEvaluation.ts)"]
+    direction TD
+    CANDS["Discovered candidates<br/>up to 50 are ranked"]
+    READ["Read homepages with Firecrawl<br/>first 25, 5 at a time, 20 s each<br/>title, description, text excerpt<br/>skipped when readHomepages is false"]
+    RANK["NebiusRerankClient<br/>POST /v1/rerank<br/>brand query against each candidate document<br/>keep the best limit (default 10, max 25)"]
+    FALLBACK["No key, no brand facts, or Nebius fails<br/>keep discovery order<br/>metrics.rerankStatus says why"]
+    JUDGE["TypeSafeEvaluator.judgeProspect<br/>POST /v1/systemone<br/>route, fit score, spam check"]
+    CANDS --> READ --> RANK
+    RANK -.-> FALLBACK
+    RANK --> JUDGE
+    FALLBACK -.-> JUDGE
+  end
+
+  ENRICH -. "brand facts become the rank query" .-> RANK
+  DISCOVER --> CANDS
+  JUDGE --> JUDGMENT["ProspectJudgment<br/>act | review | drop<br/>with confidence and reasons"]
+  JUDGMENT --> QUEUE["Convex prospect queues<br/>metrics: rerankScore, rerankStatus, homepageRead"]
+  QUEUE --> NEXT["contactResolutionMachine then outboundThreadMachine<br/>act prospects continue to outreach<br/>review prospects wait for a person"]

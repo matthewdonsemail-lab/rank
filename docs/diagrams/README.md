@@ -15,7 +15,7 @@ These Mermaid files document the system that exists in this repository. The XSta
 |---|---|
 | [`machine-pipeline.mmd`](machine-pipeline.mmd) | Generated v6 machine inventory and workflow order |
 | [`system-overview.mmd`](system-overview.mmd) | Consumers, machine boundaries, provider clients, and Convex storage |
-| [`ranking-pipeline.mmd`](ranking-pipeline.mmd) | Current local reranking baseline and TypeSafe prospect evaluation |
+| [`ranking-pipeline.mmd`](ranking-pipeline.mmd) | Discovery to judgment: homepage reads, Nebius reranking, and TypeSafe prospect evaluation |
 | [`brand-context-pipeline.mmd`](brand-context-pipeline.mmd) | Brand entity, source indexing, prompt compilation, and reply context |
 | [`brand-feedback-loop.mmd`](brand-feedback-loop.mmd) | Versioned brand context and source-reference flow |
 | [`data-model-erd.mmd`](data-model-erd.mmd) | Current Convex tables and relationships |
@@ -24,4 +24,4 @@ These Mermaid files document the system that exists in this repository. The XSta
 
 ## Current Boundary
 
-The four implemented machine stages are `brandEnrichmentMachine`, `competitorDiscoveryMachine`, `prospectEvaluationMachine`, and `outboundThreadMachine`. Firecrawl, Treg, TypeSafe, Agent, and AgentMail calls run from Convex boundaries. The Nebius client currently exposes a deterministic local baseline; remote model calls remain future integration work.
+The four implemented machine stages are `brandEnrichmentMachine`, `competitorDiscoveryMachine`, `prospectEvaluationMachine`, and `outboundThreadMachine`. Firecrawl, Treg, TypeSafe, Agent, and AgentMail calls run from Convex boundaries. The Nebius client calls the Token Factory rerank endpoint from `startCompetitorProspectEvaluations`, which ranks discovered candidates before TypeSafe judges them; it has been tested against the documented response shape but not yet against the live API.
