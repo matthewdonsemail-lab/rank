@@ -36,7 +36,7 @@ The current implementation owns the first three steps and the persisted outbound
 | Workflow state | `lib/xstate/` | XState v6 machines with retry, cancellation, and versioned persistence |
 | Verification | `mock/` and `scripts/verify-mock.mjs` | Exercises current mock routes and documentation-backed fixtures |
 
-The `NebiusRerankClient` is currently a deterministic local baseline. Nebius remains part of the planned architecture for model execution and agent reasoning, but it is not currently the driver of the workflow and is not represented as a completed remote integration.
+`NebiusRerankClient` calls the Nebius Token Factory rerank endpoint (`POST /v1/rerank`, default model `Qwen/Qwen3-Reranker-8B`) with retries, response validation and plain-language errors. It has been tested against the documented response shape with a fake network only; it has not yet been run against the live Nebius API, and nothing in the workflow calls it yet. It needs `NEBIUS_API_KEY` and never falls back to an unranked list. `baselineRank` is the separate local stand-in for tests.
 
 ## Machine Chain
 

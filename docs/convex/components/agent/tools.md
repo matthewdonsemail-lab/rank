@@ -9,6 +9,6 @@ The current boundary includes:
 - `recordReplyAnalysis` in `convex/outbound.ts`.
 - A mock model placeholder until a Nebius token-factory adapter is configured.
 
-A future Nebius tool must validate its arguments, run in the correct Convex runtime, validate the returned analysis, and persist the result before the outbound machine receives `ANALYSIS_READY`. The current `NebiusRerankClient` remains a deterministic local baseline and is not a remote model tool.
+A future Nebius tool must validate its arguments, run in the correct Convex runtime, validate the returned analysis, and persist the result before the outbound machine receives `ANALYSIS_READY`. `NebiusRerankClient` calls the Nebius rerank endpoint from a library client, but it is not registered as an agent tool and no Convex function calls it yet.
 
 See [docs/xstate/machines.md](../../../xstate/machines.md).

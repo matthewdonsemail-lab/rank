@@ -13,7 +13,7 @@ Populate the credentials required by the workflows you intend to run:
 
 ```env
 NEBIUS_API_KEY=
-NEBIUS_BASE_URL=https://api.studio.nebius.ai/v1
+NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1
 
 FIRECRAWL_API_KEY=
 TYPESAFE_API_KEY=
@@ -24,7 +24,7 @@ TREG_TOKEN=
 CONVEX_DEPLOYMENT=dev:your-deployment
 ```
 
-`NebiusRerankClient` currently uses a deterministic local baseline. A Nebius key is not required for that baseline and does not enable remote model execution by itself.
+`NebiusRerankClient` calls the Nebius Token Factory rerank endpoint and requires `NEBIUS_API_KEY`; without it `rerank()` throws instead of returning an unranked list. The default model is `Qwen/Qwen3-Reranker-8B`; set `DEFAULT_RANK_MODEL` to use another rerank model your account can access. It has not yet been run against the live API.
 
 ## Verify the Repository
 

@@ -48,7 +48,7 @@ lib/{library}/{domainname}/
 | `convex` | `telemetry` | Telemetry types and formatting | `ConvexTelemetryLogger` |
 | `convex` | `treg` | Treg client, failover, and spend helpers | `TregDomainClient` |
 | `firecrawl` | `crawl` | Firecrawl operation wrapper | `FirecrawlCrawlClient` |
-| `nebius` | `rerank` | Candidate ordering types and local baseline | `NebiusRerankClient`, `normalizeScores` |
+| `nebius` | `rerank` | Candidate reranking through the Nebius rerank endpoint, plus a local test baseline | `NebiusRerankClient`, `baselineRank`, `normalizeScores` |
 | `typesafe` | `evaluator` | Typed System One evaluation and prospect judgment | `TypeSafeEvaluator`, `noul`, `choice`, `score` |
 | `xstate` | `enrichment` | Brand enrichment machine | `brandEnrichmentMachine` |
 | `xstate` | `competitor-discovery` | Competitor discovery machine | `competitorDiscoveryMachine` |

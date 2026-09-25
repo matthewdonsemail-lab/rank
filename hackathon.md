@@ -11,9 +11,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T05:22:00Z
+- **Last updated:** 2026-09-25T07:30:00Z
 
 ## Log
+
+### 2026-09-25 - real Nebius rerank client (Mandeep)
+Replaced the placeholder in `lib/nebius/rerank/client.ts` (it scored candidates 1/(index+1) and ignored the query) with a client for Nebius Token Factory `POST https://api.tokenfactory.nebius.com/v1/rerank`, taken from Nebius's own OpenAPI spec. The old default base URL (`api.studio.nebius.ai`) and the `BAAI/bge-reranker-v2-m3` default were not what Nebius documents; the default model is now `Qwen/Qwen3-Reranker-8B`, the one in the spec, and `DEFAULT_RANK_MODEL` overrides it. The client maps scores back onto candidates by index, sorts best first, applies `topK`, validates every field it uses, retries 408/429/5xx and network failures, and raises `NebiusError` with plain-language messages that never include the key or the response body. It throws without `NEBIUS_API_KEY` instead of returning an unranked list. The old behaviour is kept only as `baselineRank`, clearly labelled as not a relevance model. `rerankDetailed()` also returns the model and token usage. 11 vitest tests with a fake fetch, not yet run against the live API (no Nebius key set). Updated README, features, self-hosting, agent tools and naming docs to say exactly that.
 
 ### 2026-09-25 - realignment to ai link-building, backlink prospect ranking, and editorial outreach engine
 Aligned the Rank by ListeningKit engine to its true identity as an autonomous AI link-building, backlink prospect ranking, and editorial outreach engine. Completely removed incorrect social media marketing / lead triage framing across Reddit, X/Twitter, and Facebook. Articulated the core workflow: ingesting brand website assets and published articles (`BrandEntity` and `BrandPage` in `lib/brand/`), live web prospecting and PBN/link farm spam filtering (via `@listeningkit/treg`), cross-encoder opportunity ranking and fit rationale generation using Nebius AI Studio GPU infrastructure (`BAAI/bge-reranker-v2-m3`), and autonomous pitch drafting via `@convex-dev/agent` with warmed sending pool execution and first-reply handoffs via `@agentmail/convex`. Overhauled `README.md`, `docs/architecture.md`, `docs/features.md`, `docs/backend-reference.md`, and `docs/brand/channels.md`. Maintained strict zero-emoji compliance and verified all 5 pre-push quality gates.

@@ -48,7 +48,7 @@ This page lists capabilities that exist in the source tree and separates them fr
 
 ### Ranking utility
 
-- `NebiusRerankClient` currently provides a deterministic local baseline for candidate ordering.
+- `NebiusRerankClient` reranks candidates through the Nebius Token Factory `POST /v1/rerank` endpoint and maps the scores back onto the candidates, best first, with `topK`. It is covered by tests against the documented response shape but has not been run against the live API yet. `baselineRank` is a separate local stand-in that keeps the given order and is not a relevance model.
 - `normalizeScores()`, `mergeRankings()`, and related helpers are available as standalone utilities.
 - A remote model request is not part of the current machine chain.
 
