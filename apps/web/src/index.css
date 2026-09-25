@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Black.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color: #1a1a19;
+  background: #f8f8f8;
+  font-family: 'Satoshi', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: #f8f8f8;
+}
+
+html {
+  cursor: url('/cursors/pointer.svg') 6 9, default;
+}
+
+html a,
+html button,
+html [role='button'],
+html input:is([type='button'], [type='submit'], [type='reset'], [type='checkbox'], [type='radio']),
+html label[for],
+html select,
+html summary {
+  cursor: url('/cursors/pointer.svg') 6 9, pointer !important;
+}
+
+html a:hover,
+html button:hover,
+html [role='button']:hover,
+html input:is([type='button'], [type='submit'], [type='reset'], [type='checkbox'], [type='radio']):hover,
+html label[for]:hover,
+html select:hover,
+html summary:hover,
+html [data-cursor='hover'],
+html .cursor-hover,
+html .text-scrambler:hover,
+html [data-hp-scramble]:hover {
+  cursor: url('/cursors/hover.svg') 14 2, pointer !important;
+}
+
+html a:active,
+html button:active,
+html [role='button']:active,
+html input:is([type='button'], [type='submit'], [type='reset'], [type='checkbox'], [type='radio']):active,
+html label[for]:active,
+html select:active,
+html summary:active,
+html [data-cursor='hover']:active,
+html [data-cursor='hover'] a:active,
+html [data-cursor='hover'] button:active,
+html [data-cursor='click'],
+html .cursor-click {
+  cursor: url('/cursors/click.svg') 14 2, pointer !important;
+}
+
+html button:disabled,
+html [aria-disabled='true'],
+html [data-cursor='not-allowed'],
+html .cursor-not-allowed {
+  cursor: url('/cursors/pointer.svg') 6 9, not-allowed !important;
+}
+
+html input:is(
+    [type='text'],
+    [type='password'],
+    [type='email'],
+    [type='search'],
+    [type='url'],
+    [type='number'],
+    [type='tel'],
+    :not([type])
+  ),
+html textarea,
+html [contenteditable='true'],
+html [data-cursor='text'],
+html .cursor-text {
+  cursor: url('/cursors/text.svg') 16 16, text !important;
+}
+
+html [data-cursor='grab'],
+html .cursor-grab {
+  cursor: url('/cursors/grab.svg') 14 2, grab !important;
+}
+
+html [data-cursor='grabbing'],
+html .cursor-grabbing {
+  cursor: url('/cursors/grab.svg') 14 2, grabbing !important;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html .find-customers-plug-link,
+html .find-customers-plug-link:hover {
+  cursor: url('/cursors/click.svg') 14 2, pointer !important;
+}

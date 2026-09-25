@@ -17,7 +17,10 @@
     "mock:verify": "node scripts/verify-mock.mjs",
     "check:machines": "node scripts/check-machine-docs.mjs",
     "check:docs": "node scripts/check-project-docs.mjs",
-    "docs:xstate": "node scripts/pull-xstate-docs.mjs"
+    "docs:xstate": "node scripts/pull-xstate-docs.mjs",
+    "web:dev": "pnpm --dir apps/web dev",
+    "web:build": "pnpm --dir apps/web build",
+    "web:typecheck": "pnpm --dir apps/web typecheck"
   },
   "keywords": [
     "nebius",

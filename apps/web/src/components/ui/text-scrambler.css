@@ -1,0 +1,43 @@
+.text-scrambler {
+  max-width: 100%;
+  color: #1a1a19;
+  font-size: clamp(3rem, 8.5vw, 8rem);
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  line-height: 0.9;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.text-scrambler__line {
+  display: inline;
+  white-space: nowrap;
+}
+
+.text-scrambler__word {
+  display: inline-flex;
+  white-space: nowrap;
+}
+
+.text-scrambler__character {
+  display: inline-block;
+  transition: none;
+}
+
+.text-scrambler__character-inner {
+  display: inline-block;
+  min-width: 0.08em;
+}
+
+.text-scrambler__character-inner [torph-item],
+.text-scrambler__character-inner [torph-slot] {
+  color: inherit !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+@media (max-width: 640px) {
+  .text-scrambler {
+    font-size: clamp(2.35rem, 11vw, 4.5rem);
+  }
+}
