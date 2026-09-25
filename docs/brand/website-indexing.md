@@ -6,7 +6,8 @@ Brand sources represent indexed website pages (`BrandPage[]`) that back model re
 
 `POST /api/brand/index` resolves pages from the website sitemap:
 - In mock mode, `seedSourcesFor(website, brandName)` deterministically seeds primary pages: Home, Services, About, and Contact.
-- In live mode, Firecrawl map endpoint (`FIRECRAWL_MAP_URL`) scrapes verified same-origin links up to configured limits.
+- In live mode, the official `@firecrawl/firecrawl-convex` component maps the site and the application stores the returned links.
+- Durable Firecrawl crawls are started through the authenticated `convex/firecrawl.ts` boundary and remain reactive through the component.
 
 ## 2. Page Status States
 

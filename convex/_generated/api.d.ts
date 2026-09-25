@@ -8,4 +8,6 @@ export declare const internal: any;
 export declare const components: {
   agent: any;
   agentmail: any;
+  firecrawl: any;
+  treg: any;
 };

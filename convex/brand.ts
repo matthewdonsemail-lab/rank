@@ -1,7 +1,10 @@
 import { ConvexError, v } from 'convex/values';
-import { internal } from './_generated/api.js';
-import { businessSummary, mapSite, normalizeWebsite, scrapeBrand, type BrandFacts } from './lib/firecrawl.js';
+import { FirecrawlCrawlClient } from '../lib/firecrawl/crawl/index.js';
+import { components, internal } from './_generated/api.js';
+import { BRAND_SCHEMA, businessSummary, normalizeWebsite, parseBrandFacts, type BrandFacts } from './lib/firecrawl.js';
 import { action, internalMutation, query, requireOwner } from './lib/server.js';
+
+const firecrawl = FirecrawlCrawlClient.fromComponent(components.firecrawl);
 
 const COOLDOWN_MS = 30_000;
 
@@ -33,19 +36,23 @@ export const extractFromWebsite = action({
     const owner = identity.tokenIdentifier;
     const target = normalizeWebsite(args.url);
     if (!target.ok) throw new ConvexError(target.reason);
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) throw new ConvexError('Reading your website is not switched on yet.');
 
     const claimRef = (internal as any).brand?.claim ?? 'brand:claim';
     await ctx.runMutation(claimRef, { owner, kind: 'facts' });
 
-    let facts: BrandFacts;
+    let facts: BrandFacts | null;
     try {
-      facts = await scrapeBrand(fetch, apiKey, target.url);
+      const result = await firecrawl.scrape(ctx, target.url, {
+        formats: [{ type: 'json', schema: BRAND_SCHEMA as Record<string, unknown> }],
+        onlyMainContent: true,
+      });
+      facts = parseBrandFacts(result.json);
     } catch (error) {
       console.error('brand: Firecrawl failed', error instanceof Error ? error.message : error);
       throw new ConvexError(plainReason(error));
     }
+
+    if (!facts) throw new ConvexError('That page did not say enough about the business to read a name from it');
 
     const storeRef = (internal as any).brand?.store ?? 'brand:store';
     await ctx.runMutation(storeRef, { owner, sourceUrl: target.url, facts });
@@ -64,15 +71,16 @@ export const mapWebsite = action({
     const owner = identity.tokenIdentifier;
     const target = normalizeWebsite(args.url);
     if (!target.ok) throw new ConvexError(target.reason);
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) throw new ConvexError('Reading your website is not switched on yet.');
 
     const claimRef = (internal as any).brand?.claim ?? 'brand:claim';
     await ctx.runMutation(claimRef, { owner, kind: 'map' });
 
     try {
-      const links = await mapSite(fetch, apiKey, target.url);
-      return { sourceUrl: target.url, links: links.slice(0, 7) };
+      const result = await firecrawl.map(ctx, target.url, {
+        limit: 25,
+        ignoreQueryParameters: true,
+      });
+      return { sourceUrl: target.url, links: result.links.slice(0, 7) };
     } catch (error) {
       console.error('brand: Firecrawl map failed', error instanceof Error ? error.message : error);
       throw new ConvexError(plainReason(error));

@@ -70,4 +70,18 @@ export default defineSchema({
     lastAttemptAt: v.number(),
     lastMapAt: v.optional(v.number()),
   }).index("by_owner", ["owner"]),
+
+  firecrawlCrawls: defineTable({
+    owner: v.string(),
+    crawlId: v.string(),
+    url: v.string(),
+    status: v.union(v.literal("scraping"), v.literal("completed"), v.literal("failed"), v.literal("cancelled")),
+    mode: v.union(v.literal("webhook"), v.literal("poll")),
+    pageCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner_created", ["owner", "createdAt"])
+    .index("by_owner_crawl", ["owner", "crawlId"])
+    .index("by_crawl", ["crawlId"]),
 });
