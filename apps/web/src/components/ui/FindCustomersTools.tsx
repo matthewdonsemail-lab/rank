@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { TextMorph } from "torph/react";
 
-const IDLE_SVG_WIDTH = 380;
+const IDLE_SVG_WIDTH = 548;
 const EMPTY_FOCUSED_SVG_WIDTH = 320;
 const MIN_SVG_WIDTH = 288;
 const MAX_SVG_WIDTH = 720;
@@ -64,7 +65,9 @@ export function FindCustomersTools() {
       ? EMPTY_FOCUSED_SVG_WIDTH
       : IDLE_SVG_WIDTH;
   const ctaPath = createCtaPath(svgWidth);
-  const inputUnderlineWidth = Math.min(Math.max(inputTextWidth + 24, 80), 680);
+  const inputUnderlineWidth = value.length === 0
+    ? "min(100%, 18rem)"
+    : `${Math.min(Math.max(inputTextWidth + 24, 80), 680)}px`;
   const responsiveCtaWidth = `min(${svgWidth - 32}px, calc(100vw - 2rem))`;
   const responsiveSvgWidth = `min(${svgWidth}px, calc(100vw - 1rem))`;
   return (
@@ -136,13 +139,24 @@ export function FindCustomersTools() {
         </span>
         <div className="relative min-w-0 flex-1 self-stretch overflow-hidden">
           <span
-            className="pointer-events-none absolute bottom-1 left-0 z-0 h-1 -translate-y-1 bg-[#F8F8F8] opacity-60 transition-[width,opacity,transform] duration-300 ease-out motion-reduce:transition-none"
-            style={{ width: `${inputUnderlineWidth}px` }}
+            className="pointer-events-none absolute bottom-3 left-0 z-0 h-1 max-w-full -translate-y-2 bg-[#F8F8F8] opacity-60 transition-[width,opacity,transform] duration-300 ease-out motion-reduce:transition-none"
+            style={{ width: inputUnderlineWidth }}
             aria-hidden="true"
           />
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden">
+            <TextMorph
+              as="span"
+              className="inline-block whitespace-nowrap text-3xl font-black leading-none text-[#F8F8F8] sm:text-6xl"
+              ease={{ stiffness: 1200, damping: 14, mass: 0.35, precision: 0.03 }}
+              numbers={false}
+              scale
+            >
+              {value}
+            </TextMorph>
+          </div>
           <input
             ref={inputRef}
-            className="relative z-20 h-full w-full min-w-0 appearance-none border-0 bg-transparent px-0 text-left text-3xl font-black leading-none text-[#F8F8F8] outline-none transition-colors duration-200 caret-[#2A8CFF] focus:ring-0 sm:text-6xl"
+            className="relative z-20 h-full w-full min-w-0 appearance-none border-0 bg-transparent px-0 text-left text-3xl font-black leading-none text-transparent outline-none transition-colors duration-200 caret-[#2A8CFF] selection:bg-[#2A8CFF]/40 focus:ring-0 sm:text-6xl"
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             value={value}

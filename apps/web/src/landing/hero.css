@@ -11,67 +11,16 @@
   width: min(100% - 3rem, 78rem);
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
+  gap: 3rem;
 }
 
 .hero-main-text.text-scrambler {
-  text-align: left;
-}
-
-.hero-agent-icon {
-  display: inline-block;
-  width: clamp(2.25rem, 3.5vw, 3rem);
-  height: auto;
-  aspect-ratio: 305 / 77;
-  margin-right: clamp(5.5rem, 13vw, 6.5rem);
-  object-fit: contain;
-  transform: scale(3);
-  transform-origin: left center;
-  vertical-align: middle;
-}
-
-.hero-keywords-icon {
-  display: inline-block;
-  width: clamp(2.25rem, 3.5vw, 3rem);
-  height: auto;
-  aspect-ratio: 494 / 82;
-  margin: 0 clamp(5.5rem, 13vw, 6.5rem) 0 0.1em;
-  object-fit: contain;
-  transform: scale(3);
-  transform-origin: left center;
-  vertical-align: middle;
-}
-
-.hero-subtext-copy {
-  width: min(100%, 60rem);
-  margin: 0;
-  color: #1a1a19;
-  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
-  font-weight: 400;
-  line-height: 1.35;
-  text-align: left;
-}
-
-.hero-handwritten-emphasis {
-  color: #2a8cff;
-  font-family: 'Schoolbell', 'Cabin Sketch', cursive;
-  font-size: clamp(1.35rem, 2vw, 1.8rem);
-  font-weight: 400;
-  line-height: 1.2;
-  text-decoration-line: underline;
-  text-decoration-style: wavy;
-  text-decoration-color: #2a8cff;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 0.22em;
+  text-align: center;
 }
 
 @media (max-width: 640px) {
   .hero-layout {
     width: calc(100% - 2rem);
-  }
-
-  .hero-subtext-copy {
-    width: 100%;
   }
 }
 

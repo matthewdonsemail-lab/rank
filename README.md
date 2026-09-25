@@ -1,3 +1,5 @@
+![Rank by ListeningKit](./banner.png)
+
 # Rank by ListeningKit
 
 Rank is an AI-assisted link-building and backlink prospect ranking engine for ListeningKit. The product goal is to turn a brand's own content into grounded evidence, find publications and pages where that content is genuinely useful, explain the editorial fit, and eventually help an agent prepare a personalized outreach decision.
