@@ -32,7 +32,14 @@ function createCtaPath(svgWidth: number) {
   ].join(" ");
 }
 
-export function FindCustomersTools() {
+interface FindCustomersToolsProps {
+  /** Called with what was typed after "www." when the box is submitted. */
+  onSubmit?: (value: string) => void;
+  /** True while a run is in progress: the box stays visible but a second run cannot be started. */
+  busy?: boolean;
+}
+
+export function FindCustomersTools({ onSubmit, busy = false }: FindCustomersToolsProps = {}) {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
   const [textWidth, setTextWidth] = useState(0);
@@ -72,8 +79,11 @@ export function FindCustomersTools() {
   const responsiveSvgWidth = `min(${svgWidth}px, calc(100vw - 1rem))`;
   return (
     <form
-      action="/request-access"
-      method="get"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!busy) onSubmit?.(value);
+      }}
+      aria-busy={busy}
       data-hp-cursor-label="press enter to submit"
       data-astro-cid-nrqvy5fv=""
       className="group relative isolate mx-auto grid h-[98px] w-full max-w-[calc(100vw_-_2rem)] place-items-center text-ink transition-[width] duration-300 ease-out motion-reduce:transition-none sm:h-[123px]"
@@ -113,8 +123,8 @@ export function FindCustomersTools() {
         />
       </svg>
       <span className="pointer-events-none absolute inset-0 z-20 rounded-full" aria-hidden="true" />
-      <label className="sr-only" htmlFor="waitlist-handle" data-astro-cid-nrqvy5fv="">
-        Claim your handle
+      <label className="sr-only" htmlFor="website-input" data-astro-cid-nrqvy5fv="">
+        Your website address
       </label>
       <span
         ref={sizerRef}
@@ -161,23 +171,22 @@ export function FindCustomersTools() {
             onBlur={() => setFocused(false)}
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            id="waitlist-handle"
+            id="website-input"
             data-hp-cursor-text=""
-            name="handle"
+            name="website"
             type="text"
             autoComplete="off"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            maxLength={20}
-            pattern="[A-Za-z0-9_]{3,20}"
+            maxLength={60}
+            inputMode="url"
             data-astro-cid-nrqvy5fv=""
           />
         </div>
       </div>
-      <input type="hidden" name="from" value="waitlist-fold" data-astro-cid-nrqvy5fv="" />
-      <button className="sr-only" type="submit" data-astro-cid-nrqvy5fv="">
-        Claim this handle
+      <button className="sr-only" type="submit" disabled={busy} data-astro-cid-nrqvy5fv="">
+        Find sites that should link to me
       </button>
     </form>
   );

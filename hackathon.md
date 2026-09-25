@@ -11,9 +11,12 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T10:10:00Z
+- **Last updated:** 2026-09-25T12:00:00Z
 
 ## Log
+
+### 2026-09-25 - landing page starts a real run (Mandeep)
+The hero box on `apps/web` was a leftover waitlist form (a "handle" field that submitted to a `/request-access` route that does not exist) under a headline promising to make a site "rank in no time". Replaced it: the box now takes a website address (`parseWebsite` in `src/lib/site.ts`), and the headline and sub-line say what the product does (find the sites that should link to you). Submitting runs the existing pipeline through `src/run/pipeline.ts` (`startBrandEnrichment`, then `startCompetitorDiscovery` with 20 competitors, then `startCompetitorProspectEvaluations` judging the best 8), then reads the act, review and drop queues so each result shows its verdict, confidence, fit and reasons, in ranked order. `RunProvider.tsx` wires Clerk and Convex; a signed-out visitor gets the Clerk sign-in first and the run starts on return, so credit spend is limited to signed-in users. Without `VITE_CONVEX_URL` and `VITE_CLERK_PUBLISHABLE_KEY` the page still renders and says live runs are not switched on. Added `convex/auth.config.ts` (env driven: `AUTH_ISSUER`, `AUTH_AUDIENCE`; empty means no provider and every owner-gated action refuses). Added `@clerk/react` and `convex` to `apps/web/package.json`; the lockfile still needs `pnpm install`. Type checked and built in a clean npm install of `apps/web`, sign-in modal confirmed in a browser, 8 vitest tests for the address parser and the pipeline with a stand-in backend. Not run end to end against the real services.
 
 ### 2026-09-25 - pipeline diagram on the README (Mandeep)
 The pipeline diagram was only in `docs/diagrams/ranking-pipeline.mmd`, so it did not show on the repository front page. Added a "How a Run Works" section to `README.md` with the same Mermaid diagram (GitHub renders it), and updated the prospect judgment row in the implementation table to mention homepage reads and Nebius ranking.

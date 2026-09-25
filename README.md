@@ -69,6 +69,17 @@ flowchart TD
   QUEUE --> NEXT["contactResolutionMachine then outboundThreadMachine<br/>act prospects continue to outreach<br/>review prospects wait for a person"]
 ```
 
+## Landing Page and Live Runs
+
+`apps/web` is the landing page. The box under the headline starts a real run: it reads the visitor's site, finds competitors, reads and ranks them, and lists the best with an act, review or skip verdict. The page calls the Convex actions `startBrandEnrichment`, `startCompetitorDiscovery` and `startCompetitorProspectEvaluations` in order (`apps/web/src/run/pipeline.ts`), then reads the prospect queues for the details.
+
+- **Sign-in is required.** A visitor who is signed out gets a Clerk sign-in first, then the run starts by itself. Every run spends Firecrawl, Treg, Nebius and TypeSafe credits, so it is not open to anonymous visitors.
+- **Each run is capped.** It looks up 20 competitors, ranks them, and judges the best 8 (`DISCOVERY_LIMIT` and `EVALUATION_LIMIT` in `pipeline.ts`).
+- **Set in `apps/web/.env.local`:** `VITE_CONVEX_URL` and `VITE_CLERK_PUBLISHABLE_KEY` (see `apps/web/.env.example`). Without them the page still shows and says live runs are not switched on.
+- **Set on the Convex deployment:** `AUTH_ISSUER` (the Clerk Frontend API URL) and `AUTH_AUDIENCE` (the audience of the Clerk JWT template named `convex`), read by `convex/auth.config.ts`. Without them every action that needs a signed-in owner refuses.
+
+It has been built and its sign-in flow opened in a browser, and the pipeline module has tests with a stand-in backend. A full run against real Firecrawl, Treg, Nebius and TypeSafe has not been done.
+
 ## Machine Chain
 
 The machine files are the behavioral source of truth. The generated inventory is checked by `scripts/check-machine-docs.mjs`.
