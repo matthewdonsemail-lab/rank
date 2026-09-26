@@ -3,6 +3,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { getSvgPath } from 'figma-squircle'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -175,5 +176,148 @@ export function SquircleBorder({
     <svg className={cn('pointer-events-none absolute inset-0 block size-full overflow-visible', className)} width={border.width} height={border.height} viewBox={`0 0 ${border.width} ${border.height}`} aria-hidden="true">
       <path d={border.path} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
     </svg>
+  )
+}
+
+interface Toast {
+  id: string
+  type: 'success' | 'error' | 'info' | 'warning'
+  title: string
+  message?: string
+}
+
+interface ToastContextType {
+  toasts: Toast[]
+  success: (title: string, message?: string) => void
+  error: (title: string, message?: string) => void
+  info: (title: string, message?: string) => void
+  warning: (title: string, message?: string) => void
+  dismiss: (id: string) => void
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined)
+
+export function useToast() {
+  const context = useContext(ToastContext)
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider')
+  }
+  return context
+}
+
+// Global toast helper for non-React contexts
+export const toast = {
+  success: (title: string, message?: string) => {
+    const event = new CustomEvent('toast', { detail: { type: 'success', title, message } })
+    window.dispatchEvent(event)
+  },
+  error: (title: string, message?: string) => {
+    const event = new CustomEvent('toast', { detail: { type: 'error', title, message } })
+    window.dispatchEvent(event)
+  },
+  info: (title: string, message?: string) => {
+    const event = new CustomEvent('toast', { detail: { type: 'info', title, message } })
+    window.dispatchEvent(event)
+  },
+  warning: (title: string, message?: string) => {
+    const event = new CustomEvent('toast', { detail: { type: 'warning', title, message } })
+    window.dispatchEvent(event)
+  },
+}
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const addToast = useCallback((type: Toast['type'], title: string, message?: string) => {
+    const id = Math.random().toString(36).substr(2, 9)
+    setToasts((prev) => [...prev, { id, type, title, message }])
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id))
+    }, 4000)
+  }, [])
+
+  const dismiss = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
+  // Listen for global toast events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { type, title, message } = (e as CustomEvent).detail
+      addToast(type, title, message)
+    }
+    window.addEventListener('toast', handler)
+    return () => window.removeEventListener('toast', handler)
+  }, [addToast])
+
+  // Stable functions: components put `toast.error` in effect dependencies; a new function each render made a failing
+  // load toast, re-render, and load again without end.
+  const actions = useMemo(
+    () => ({
+      success: (t: string, m?: string) => addToast('success', t, m),
+      error: (t: string, m?: string) => addToast('error', t, m),
+      info: (t: string, m?: string) => addToast('info', t, m),
+      warning: (t: string, m?: string) => addToast('warning', t, m),
+      dismiss,
+    }),
+    [addToast, dismiss],
+  )
+  const value = useMemo(() => ({ toasts, ...actions }), [toasts, actions])
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+      <div className="fixed bottom-3 right-3 z-50 flex flex-col gap-2">
+        {toasts.map((t) => (
+          <ToastItem key={t.id} toast={t} onDismiss={dismiss} />
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
+}
+
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
+  const clip = useSquircleClip<HTMLDivElement>(14)
+  const border = useSquircleBorder<HTMLDivElement>(14)
+  const ref = useComposedRef(clip.ref, border.ref)
+
+  const bgColors = {
+    success: 'bg-emerald-50',
+    error: 'bg-rose-50',
+    info: 'bg-blue-50',
+    warning: 'bg-amber-50',
+  }
+
+  const borderColors = {
+    success: '#a7f3d0',
+    error: '#fecdd3',
+    info: '#bfdbfe',
+    warning: '#fde68a',
+  }
+
+  const textColors = {
+    success: 'text-emerald-800',
+    error: 'text-rose-800',
+    info: 'text-blue-800',
+    warning: 'text-amber-800',
+  }
+
+  return (
+    <div ref={ref} style={clip.style} className={`relative w-72 ${bgColors[toast.type]} p-3 shadow-lg animate-in slide-in-from-right`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className={`text-sm font-medium ${textColors[toast.type]}`}>{toast.title}</p>
+          {toast.message && (
+            <p className={`text-xs mt-1 ${textColors[toast.type]} opacity-80`}>{toast.message}</p>
+          )}
+        </div>
+        <button onClick={() => onDismiss(toast.id)} className="ml-2 text-current opacity-50 hover:opacity-100">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <SquircleBorder border={border.state} stroke={borderColors[toast.type]} strokeWidth={2} />
+    </div>
   )
 }

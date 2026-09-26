@@ -1,0 +1,47 @@
+/* Usecase slide transitions: 3D flip-in for the left copy. */
+
+.lk-usecase-stage {
+  perspective: 1200px;
+}
+
+@keyframes lk-flip-in {
+  from {
+    transform: rotateX(-75deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+.lk-flip-in {
+  animation: lk-flip-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-style: preserve-3d;
+}
+
+/* Auto-loop progress bars (UsecaseLoop): the active bar fills over one
+ * loop step, then the cycle key remounts it. Hover/focus pauses both the
+ * timer and the fill via the lk-loop-paused parent class. */
+@keyframes lk-loop-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.lk-loop-fill {
+  animation: lk-loop-fill var(--lk-loop-ms, 6000ms) linear forwards;
+}
+
+.lk-loop-paused .lk-loop-fill {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-flip-in {
+    animation: none;
+  }
+}

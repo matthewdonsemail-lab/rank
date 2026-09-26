@@ -3,6 +3,7 @@ import { Header, type HeaderItem } from "./landing/Header";
 import { Hero } from "./landing/hero";
 import { MessagingPlatform } from "./landing/MessagingPlatform";
 import { SignInRoute, SignUpRoute } from "./pages/auth";
+import { OAuthCallbackRoute, OAuthCallbackSignUpRoute } from "./pages/oauth-callback";
 import { CliLoginPage } from "./pages/cli-login";
 
 type AppProps = {
@@ -52,6 +53,14 @@ export function App({ authEnabled = false, isSignedIn = false }: AppProps) {
         <Route
           path="/sign-up/*"
           element={authEnabled ? <SignUpRoute /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/oauth"
+          element={authEnabled ? <OAuthCallbackRoute /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/oauth/sign-up"
+          element={authEnabled ? <OAuthCallbackSignUpRoute /> : <Navigate to="/" replace />}
         />
         <Route
           path="/cli-login"
