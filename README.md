@@ -38,7 +38,7 @@ The current implementation owns the first three steps and the persisted outbound
 | Workflow state | `lib/xstate/` | XState v6 machines with retry, cancellation, and versioned persistence |
 | Verification | `mock/` and `scripts/verify-mock.mjs` | Exercises current mock routes and documentation-backed fixtures |
 
-`NebiusRerankClient` calls the Nebius Token Factory rerank endpoint (`POST /v1/rerank`, default model `Qwen/Qwen3-Reranker-8B`) with retries, response validation and plain-language errors. It has been tested against the documented response shape with a fake network only; it has not yet been run against the live Nebius API, and nothing in the workflow calls it yet. It needs `NEBIUS_API_KEY` and never falls back to an unranked list. `baselineRank` is the separate local stand-in for tests.
+`NebiusRerankClient` calls the Nebius Token Factory rerank endpoint (`POST /v1/rerank`, default model `Qwen/Qwen3-Reranker-8B`) with retries, response validation and plain-language errors. `convex/prospectEvaluation.ts` constructs it when `NEBIUS_API_KEY` is set, so the rerank step is part of the run. It has been tested against the documented response shape with a fake network only and has not yet been exercised against the Token Factory API. The client never reports an unranked list as ranked: `rankCandidates` keeps discovery order and stores `skipped` or `failed` with a reason in `metrics.rerankStatus`. `baselineRank` is the separate local stand-in for tests.
 
 ## How a Run Works
 
@@ -88,7 +88,7 @@ Every active stage can fail, retry, and cancel. Completed prospect decisions rem
 - **Firecrawl:** External page and crawl operations invoked by Convex actions.
 - **Treg:** External competitor/provider calls invoked by discovery.
 - **TypeSafe:** External System One questions and prospect judgments.
-- **Nebius:** Reserved for the future model boundary. The current client does not make a remote request.
+- **Nebius:** External rerank calls invoked by prospect evaluation when `NEBIUS_API_KEY` is set; the Agent reasoning boundary is separate and still uses `mockModel`.
 - **Convex Agent:** Separate reasoning sessions for outbound reply analysis; currently backed by `mockModel`.
 - **AgentMail:** Mounted transport and inbound-message component; Rank wraps it with stateful thread labels and delivery idempotency.
 - **User domains:** Rank stores verified/warming domains and prefixed shared inboxes for pool selection; live DNS and provider credentials are not configured here.
@@ -115,6 +115,7 @@ The project uses `xstate@6.0.0-alpha.59` until a stable v6 package is available.
 
 - [Machine contracts](docs/xstate/machines.md)
 - [Architecture](docs/architecture.md)
+- [Live Prospect Evaluation v1 checklist](docs/live-prospect-evaluation-v1.md)
 - [Architecture diagrams](docs/diagrams/)
 - [Current features](docs/features.md)
 - [Backend and library reference](docs/backend-reference.md)
@@ -132,3 +133,26 @@ pnpm check:machines
 pnpm check:docs
 node scripts/check-naming-conventions.mjs
 ```
+
+---
+
+<!-- footer:offer-set:start -->
+## Support
+
+If this is useful, a star helps someone else find it.
+
+[![Stars](https://img.shields.io/github/stars/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/stargazers)
+[![Forks](https://img.shields.io/github/forks/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/network/members)
+[![Watchers](https://img.shields.io/github/watchers/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/watchers)
+[![Last commit](https://img.shields.io/github/last-commit/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/commits)
+[![License](https://img.shields.io/github/license/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/blob/main/LICENSE)
+
+[![GitHub](https://img.shields.io/badge/GitHub-matthewdonsemail-lab/rank-181717?style=flat-square&logo=github&link=https://github.com/matthewdonsemail-lab/rank)](https://github.com/matthewdonsemail-lab/rank)
+[![X](https://img.shields.io/badge/X-matthewdonsemail-000000?style=flat-square&logo=x&link=https://x.com/matthewdonsemail)](https://x.com/matthewdonsemail)
+[![Issues](https://img.shields.io/github/issues/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/issues)
+[![Pull requests](https://img.shields.io/github/issues-pr/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/pulls)
+
+## Star history
+
+[![Star History Chart](https://api.star-history.com/image?repos=matthewdonsemail-lab/rank&type=Date)](https://star-history.com/#matthewdonsemail-lab/rank&Date)
+<!-- footer:offer-set:end -->
