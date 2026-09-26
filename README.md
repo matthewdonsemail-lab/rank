@@ -148,7 +148,7 @@ If this is useful, a star helps someone else find it.
 [![License](https://img.shields.io/github/license/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/blob/main/LICENSE)
 
 [![GitHub](https://img.shields.io/badge/GitHub-matthewdonsemail-lab/rank-181717?style=flat-square&logo=github&link=https://github.com/matthewdonsemail-lab/rank)](https://github.com/matthewdonsemail-lab/rank)
-[![X](https://img.shields.io/badge/X-matthewdonsemail-000000?style=flat-square&logo=x&link=https://x.com/matthewdonsemail)](https://x.com/matthewdonsemail)
+[![X](https://img.shields.io/badge/X-matthewsoldit-000000?style=flat-square&logo=x&link=https://x.com/matthewsoldit)](https://x.com/matthewsoldit)
 [![Issues](https://img.shields.io/github/issues/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/issues)
 [![Pull requests](https://img.shields.io/github/issues-pr/matthewdonsemail-lab/rank?style=flat-square)](https://github.com/matthewdonsemail-lab/rank/pulls)
 
