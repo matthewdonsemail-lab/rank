@@ -162,6 +162,31 @@ describe("runExchangeServer", () => {
     await expect(post(base, { code: "abcd", state: STATE, code_challenge: CHALLENGE, token: "tok-2" })).rejects.toThrow();
   });
 
+  test("refuses to report ok for a token the verifier rejects, and stays open for a retry", async () => {
+    const seen: string[] = [];
+    const server = runExchangeServer({
+      state: STATE,
+      challenge: CHALLENGE,
+      timeoutMs: 5_000,
+      verifyToken: async (token) => {
+        seen.push(token);
+        return token === "tok-good" ? undefined : "The deployment rejected this session.";
+      },
+    });
+    const base = await server.url;
+
+    const rejected = await post(base, { code: "abcd", state: STATE, code_challenge: CHALLENGE, token: "tok-bad" });
+    expect(rejected.status).toBe(401);
+    expect(await rejected.json()).toEqual({ ok: false, error: "The deployment rejected this session." });
+
+    // A rejection must not spend the one-shot listener: the page retries once
+    // the visitor has a working session.
+    const accepted = await post(base, { code: "abcd", state: STATE, code_challenge: CHALLENGE, token: "tok-good" });
+    expect(accepted.status).toBe(200);
+    expect(await server.result).toEqual({ ok: true, code: "abcd", token: "tok-good" });
+    expect(seen).toEqual(["tok-bad", "tok-good"]);
+  });
+
   test("rejects state and challenge mismatches, then times out", async () => {
     const badState = runExchangeServer({ state: STATE, challenge: CHALLENGE, timeoutMs: 150 });
     const stateBase = await badState.url;

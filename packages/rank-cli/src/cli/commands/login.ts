@@ -51,7 +51,10 @@ export const WHOAMI_USAGE = "Usage: rank whoami [--deployment <url>] [--json]";
 
 const ENV_VAR_NAME = "RANK_AUTH_TOKEN";
 const DEFAULT_WEB_URL = "https://rank-web-gray.vercel.app";
-const EXCHANGE_TIMEOUT_MS = 120_000;
+// A rejected token is answered 401 with the listener still open, and the fix
+// is for the visitor to sign in again — so the window has to outlast a Clerk
+// round trip, not just a single page load.
+const EXCHANGE_TIMEOUT_MS = 300_000;
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_TOKEN_LENGTH = 8192;
 
@@ -166,11 +169,18 @@ export type ExchangeResult =
  * One-shot loopback exchange server. Accepts a single valid POST to
  * /exchange and then stops serving; a timeout resolves the pending result as
  * `timed out`. Binds 127.0.0.1 only.
+ *
+ * `verifyToken` runs before the server answers `ok`, so a success the browser
+ * renders as "Authorized" means the deployment actually accepted the session
+ * — not merely that a well-formed POST arrived. A rejected token answers 401
+ * and leaves the listener running, so the page can retry once the visitor has
+ * signed in again.
  */
 export function runExchangeServer(options: {
   state: string;
   challenge: string;
   timeoutMs?: number;
+  verifyToken?: (token: string) => Promise<string | undefined>;
 }): {
   url: Promise<string>;
   result: Promise<ExchangeResult>;
@@ -287,8 +297,29 @@ const send = (status: number, body: string, type: string) => {
           return;
         }
         const { code, token } = payload as ExchangeRequest;
-        send(200, JSON.stringify({ ok: true }), "application/json");
-        finish({ ok: true, code, token });
+        const settle = (outcome: { ok: true } | { ok: false; error: string }) => {
+          if (finished) return;
+          if (outcome.ok) {
+            send(200, JSON.stringify({ ok: true }), "application/json");
+            finish({ ok: true, code, token });
+          } else {
+            // Not terminal: the listener stays up so a retry with a fresh
+            // session can still land.
+            send(401, JSON.stringify({ ok: false, error: outcome.error }), "application/json");
+          }
+        };
+        if (!options.verifyToken) {
+          settle({ ok: true });
+          return;
+        }
+        void options.verifyToken(token).then(
+          (rejection) => settle(rejection ? { ok: false, error: rejection } : { ok: true }),
+          (error: unknown) =>
+            settle({
+              ok: false,
+              error: `Could not verify the session token: ${error instanceof Error ? error.message : String(error)}`,
+            }),
+        );
       });
       req.on("error", () => undefined);
     });
@@ -416,7 +447,21 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
     const challenge = codeChallengeForVerifier(verifier);
     const state = generateState();
 
-    const exchange = runExchangeServer({ state, challenge, timeoutMs: loginDeps.timeoutMs });
+    const exchange = runExchangeServer({
+      state,
+      challenge,
+      timeoutMs: loginDeps.timeoutMs,
+      // Prove the token against the deployment *before* the browser is told
+      // "Authorized". Validating afterwards (see below) left the page
+      // claiming success while the CLI died with NoAuthProvider.
+      verifyToken: async (candidate) => {
+        const outcome = await loginValidateDeps.validate({ deploymentUrl: deployment, authToken: candidate });
+        if (outcome.ok) return undefined;
+        return outcome.error.kind === "auth"
+          ? "The deployment rejected this session. Sign in again, then retry — rank login is still waiting."
+          : outcome.error.message;
+      },
+    });
     let exchangeUrl: string;
     try {
       exchangeUrl = `${await exchange.url}/exchange`;

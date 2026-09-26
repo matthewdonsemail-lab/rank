@@ -125,8 +125,9 @@ export function CliLoginPage() {
     return readStoredExchange();
   });
 
+  /** Resolves true once the CLI's one-shot listener is spent. */
   const postExchange = useCallback(
-    async (exchange: PendingExchange, token: string) => {
+    async (exchange: PendingExchange, token: string): Promise<boolean> => {
       setResult({ kind: "posting" });
       try {
         const response = await fetch(exchange.exchangeUrl, {
@@ -142,13 +143,17 @@ export function CliLoginPage() {
         const body = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
         if (response.ok && body.ok) {
           setResult({ kind: "ok" });
-          return;
+          return true;
         }
+        // 401 is the CLI refusing the session while keeping the listener open,
+        // so it stays retryable — re-signing in and trying again is the fix.
+        const retryable = response.status === 401;
         setResult({
           kind: "error",
           detail: body.error ?? `The CLI rejected the exchange (HTTP ${response.status}).`,
-          terminal: true,
+          terminal: !retryable,
         });
+        return !retryable;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setResult({
@@ -156,6 +161,7 @@ export function CliLoginPage() {
           detail: `Could not reach the CLI at ${exchange.exchangeUrl}. It may have finished or timed out — run \`rank login\` again. (${message})`,
           terminal: true,
         });
+        return true;
       }
     },
     [],
@@ -198,11 +204,10 @@ export function CliLoginPage() {
         });
         return;
       }
-      void postExchange(pending, token).then(() => {
-        // Either way the one-shot listener is spent, so stop advertising a
-        // pending run to the next visit. An in-memory `pending` survives for
-        // "Try again" on this page.
-        clearStoredExchange();
+      void postExchange(pending, token).then((spent) => {
+        // Only forget the pending run once the listener is actually spent. A
+        // 401 keeps it alive, so the session mirror must survive for the retry.
+        if (spent) clearStoredExchange();
       });
     });
     return () => {
