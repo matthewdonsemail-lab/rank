@@ -1,25 +1,25 @@
 # Git hooks managed by lefthook (https://github.com/evilmartians/lefthook).
 # Install after cloning: pnpm exec lefthook install
+# Run this same gate manually with: pnpm run check:pre-push
+# CI should run `pnpm run check:pre-push` independently; local hooks can be skipped.
 
 pre-push:
   jobs:
     - name: hackathon log updated within 30 min
-      run: node scripts/check-hackathon-log.mjs
+      run: pnpm run check:hackathon-log
     - name: no monospace fonts (brand rule)
-      run: node scripts/check-no-font-mono.mjs
+      run: pnpm run check:brand:no-mono
     - name: no tracking-* utilities (brand rule)
-      run: node scripts/check-no-tracking.mjs
+      run: pnpm run check:brand:no-tracking
     - name: machine contracts and documentation
-      run: node scripts/check-machine-docs.mjs
+      run: pnpm run check:machine-docs
     - name: project documentation is current
-      run: node scripts/check-project-docs.mjs
+      run: pnpm run check:project-docs
     - name: library and domain naming conventions
-      run: node scripts/check-naming-conventions.mjs
-    - name: CLI, MCP, and HTTP surfaces agree
-      run: node scripts/check-surfaces.mjs
+      run: pnpm run check:naming
+    - name: capability and environment catalog checks
+      run: pnpm run check:surfaces
     - name: no emojis (brand rule)
-      run: node scripts/check-no-emojis.mjs
-    - name: package type checks
-      run: bun run --cwd packages/rank-core typecheck && bun run --cwd packages/rank-cli typecheck && bun run --cwd packages/rank-mcp typecheck
-    - name: package tests
-      run: bun test packages/rank-core packages/rank-cli packages/rank-mcp
+      run: pnpm run check:brand:no-emoji
+    - name: tooling package type checks and tests
+      run: pnpm run check:tooling

@@ -92,7 +92,7 @@ The request contains `state`, `model`, and a map of typed questions. The respons
 
 ## Reranking Boundary
 
-`NebiusRerankClient` is exported from [`lib/nebius/rerank/`](../lib/nebius/rerank/). The current implementation normalizes a deterministic local score sequence; it does not issue a remote request. The configured model name remains an input for the future provider adapter, not evidence of a completed remote integration.
+`NebiusRerankClient` is exported from [`lib/nebius/rerank/`](../lib/nebius/rerank/). It calls the Nebius Token Factory rerank endpoint (`POST /v1/rerank`) with retries and response validation, and `convex/prospectEvaluation.ts` constructs it whenever `NEBIUS_API_KEY` is set, passing it into `rankCandidates`. Without a key — or when the call fails — ranking keeps discovery order and records why in `metrics.rerankStatus`. Request/response behavior is covered by fake-transport tests; no live API verification has been recorded, so this is remote-capable and wired, not live-verified.
 
 ## Mock HTTP Surface
 

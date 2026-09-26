@@ -1,10 +1,10 @@
 {
-  "description": "Every Rank capability and the surfaces that expose it. The CLI, the MCP server, and the Convex HTTP routes are all generated from this file, and `pnpm check:surfaces` fails when a surface drifts from it.",
+  "description": "Catalog of every Rank capability and the surfaces that document it. The CLI, the MCP server, and the Convex HTTP routes are implemented separately and checked against this file; `pnpm check:surfaces` verifies names, routes, and manifest references by source inspection, not runtime parity. A shared entry means the same subject on each surface, not identical behavior — see per-surface scope notes.",
   "capabilities": [
     {
       "id": "env.doctor",
       "title": "Environment preflight",
-      "summary": "Resolve every environment variable Rank reads and report what is missing per pipeline stage.",
+      "summary": "Resolve every environment variable Rank reads and report what is missing per pipeline stage. Scope differs by surface: the CLI reads the linked deployment unless --local is passed, the MCP tool reads local sources only, and the HTTP route reports deployment presence through a Convex query.",
       "stage": "local tooling",
       "mutating": false,
       "requiresEnv": ["CLERK_JWT_ISSUER", "CLERK_JWT_AUDIENCE", "FIRECRAWL_API_KEY"],

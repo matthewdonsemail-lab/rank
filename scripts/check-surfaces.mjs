@@ -1,8 +1,12 @@
-// Pre-push gate: surface consistency.
+// Pre-push gate: surface catalog consistency.
 //
-// config/capabilities.json is the single source for every Rank capability. The
-// CLI, the MCP server, and the Convex HTTP routes are all derived from it, so
-// this check fails when a surface drifts.
+// config/capabilities.json catalogs every Rank capability. The CLI, the MCP
+// server, and the Convex HTTP routes are implemented separately and checked
+// against that catalog here, so this check fails when a surface drifts from it.
+//
+// This is a catalog check, not a parity proof. It verifies by source inspection
+// that advertised names, routes, and environment references exist — it does not
+// execute the surfaces or establish that they behave identically.
 //
 // Verifies:
 // 1. Every capability declares a cli, mcp, and http surface
@@ -139,4 +143,4 @@ if (violations.length > 0) {
 }
 
 const count = capabilities?.capabilities?.length ?? 0;
-console.log(`pre-push: OK — ${count} capabilities consistent across the CLI, MCP, and HTTP surfaces.`);
+console.log(`pre-push: OK — ${count} catalog entries match declared CLI, MCP, and HTTP names/routes.`);
