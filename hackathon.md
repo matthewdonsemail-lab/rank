@@ -11,9 +11,15 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-25T10:10:00Z
+- **Last updated:** 2026-09-26T18:38:00Z
 
 ## Log
+
+### 2026-09-27 - Dropped the duplicate motion runtime from apps/web — matthewdonsemail-lab
+- Beads: rank-aspz
+- Commit: e6d97faa778d8e3f19c14321242a8b94c0cfa0fe (2026-09-27 01:38:29 +0700)
+- Files: apps/web/package.json, apps/web/src/components/ui/animated-tooltip.tsx, pnpm-lock.yaml
+- The production auth screen was throwing React error #310 (invalid hook call) in the minified bundle. `apps/web` carried the same animation runtime twice under two package names — `framer-motion@13.4.4` (used only by `animated-tooltip.tsx`) and `motion@13.4.3` (used by Usecase, UsecaseLoop, and other ported components) — while the sibling app ships only `motion`. Removed the `framer-motion` dependency, repointed `animated-tooltip.tsx` to `motion/react` (identical `motion`/`AnimatePresence` exports), and let the lockfile drop the duplicate. Root typecheck, web typecheck, and all 10 pre-push gates pass (223 tests).
 
 ### 2026-09-27 - Renamed the CLI exchange route /cli-login to /cli — matthewdonsemail-lab
 - Beads: rank-mf7s
