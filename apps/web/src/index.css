@@ -54,6 +54,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* The UA stylesheet sets `code { font-family: monospace }`, and a specified
+   value beats inheritance — so these tags rendered in a monospace face
+   instead of the Satoshi stack set on :root. Brand rule is Satoshi/Inter
+   only, so make them inherit. */
+code,
+kbd,
+samp,
+pre {
+  font-family: inherit;
+}
+
 body {
   min-width: 320px;
   margin: 0;

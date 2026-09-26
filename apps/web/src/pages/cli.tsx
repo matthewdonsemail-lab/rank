@@ -1,25 +1,50 @@
 /**
  * /cli — the browser half of `rank login`.
  *
- * The CLI opens this page with `?state=...&code_challenge=...&exchange=...`,
- * where exchange is the one-shot loopback URL it is listening on. When the
- * viewer is signed in via Clerk, the page posts a single-use random code plus
- * the session token back to the CLI. The CLI accepts the exchange only when
- * the state and code_challenge match the run it started, which binds the
- * exchange to that terminal and makes a replayed POST useless.
+ * The CLI opens this page with `?state=…&code_challenge=…&exchange=…`, where
+ * exchange is the one-shot loopback URL it is listening on. When the viewer is
+ * signed in via Clerk, the page posts a single-use random code plus the
+ * session token back to the CLI. The CLI accepts the exchange only when the
+ * state and code_challenge match the run it started, which binds the exchange
+ * to that terminal and makes a replayed POST useless.
+ *
+ * The exchange params are mirrored into sessionStorage the moment they arrive,
+ * because Clerk does not preserve the query string across the sign-in round
+ * trip — without the mirror the page came back signed in but blind to which
+ * `rank login` run it was serving, and could only report a dead end. The
+ * routing is therefore:
+ *
+ *   no params, nothing stored  -> nothing is pending; ask for a fresh run
+ *   params, not signed in      -> hand off to /sign-in, return here, exchange
+ *   params, signed in          -> post the proof, report the outcome
  *
  * The token is never displayed, and the exchange response is rendered only as
- * ok/fail text. An unsigned visitor is offered Clerk sign-in and returns here
- * (Clerk persists the redirect target across the sign-in round-trip).
+ * ok/fail text.
+ *
+ * This screen mounts the shared two-panel auth layout rather than its own
+ * shell, so it opens identically to sign-in and sign-up: same brand mark,
+ * headline scale, max-w-xs form column, and pinned showcase. Only the form
+ * column differs — instead of Clerk's card it renders our own controls, built
+ * from the same recipes (`splitControl`) Clerk's appearance map uses.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@clerk/react";
-import { Link } from "react-router-dom";
+import { OnboardingAuthLoading } from "./onboarding/OnboardingAuth";
+import { OnboardingSplit, SplitNotice, splitControl } from "./onboarding/OnboardingSplit";
 
-interface CliLoginResult {
-  kind: "idle" | "posting" | "ok" | "error";
-  detail?: string;
+type CliLoginResult =
+  | { kind: "idle" | "posting" }
+  | { kind: "ok" }
+  | { kind: "error"; detail: string; terminal: boolean };
+
+interface PendingExchange {
+  state: string;
+  codeChallenge: string;
+  exchangeUrl: string;
 }
+
+const STORAGE_KEY = "rank.cli.exchange";
+const EXCHANGE_RE = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/exchange$/;
 
 function randomCode(): string {
   const bytes = new Uint8Array(32);
@@ -27,159 +52,204 @@ function randomCode(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-const EXCHANGE_RE = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/exchange$/;
-
-function CliLoginLoading() {
+function isPending(value: unknown): value is PendingExchange {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<PendingExchange>;
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f8f8f8] px-4 text-sm text-slate-500">
-      Loading…
-    </main>
+    typeof candidate.state === "string" &&
+    candidate.state !== "" &&
+    typeof candidate.codeChallenge === "string" &&
+    candidate.codeChallenge !== "" &&
+    typeof candidate.exchangeUrl === "string" &&
+    EXCHANGE_RE.test(candidate.exchangeUrl)
   );
+}
+
+function readExchangeFromUrl(): PendingExchange | null {
+  const params = new URLSearchParams(window.location.search);
+  const candidate = {
+    state: params.get("state") ?? "",
+    codeChallenge: params.get("code_challenge") ?? "",
+    exchangeUrl: params.get("exchange") ?? "",
+  };
+  return isPending(candidate) ? candidate : null;
+}
+
+function readStoredExchange(): PendingExchange | null {
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPending(parsed)) {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function storeExchange(exchange: PendingExchange): void {
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(exchange));
+  } catch {
+    // Private-mode storage denial only costs us the post-sign-in recovery path.
+  }
+}
+
+function clearStoredExchange(): void {
+  try {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Nothing to do.
+  }
 }
 
 export function CliLoginPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [result, setResult] = useState<CliLoginResult>({ kind: "idle" });
-  const startedRef = useRef(false);
+  // Bumped by "Try again" to re-arm the effect. A ref guard alone cannot
+  // retry: the effect's dependencies are unchanged by a retry, so React would
+  // never call it a second time.
+  const [attempt, setAttempt] = useState(0);
 
-  const { state, codeChallenge, exchangeUrl } = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    const exchange = params.get("exchange") ?? "";
-    return {
-      state: params.get("state") ?? "",
-      codeChallenge: params.get("code_challenge") ?? "",
-      exchangeUrl: EXCHANGE_RE.test(exchange) ? exchange : "",
-    };
-  }, []);
+  // Read once, on the first render: the query string is authoritative, and the
+  // session mirror only fills in when a redirect ate it.
+  const [pending] = useState<PendingExchange | null>(() => {
+    const fromUrl = readExchangeFromUrl();
+    if (fromUrl) {
+      storeExchange(fromUrl);
+      return fromUrl;
+    }
+    return readStoredExchange();
+  });
 
-  // Signed in but the URL lost its params (e.g. a hard refresh): surface that
-  // rather than silently posting nothing, so the operator re-runs rank login.
-  const exchangeConfigured = state !== "" && codeChallenge !== "" && exchangeUrl !== "";
-
-  const attemptExchange = useCallback(
-    async (token: string) => {
+  const postExchange = useCallback(
+    async (exchange: PendingExchange, token: string) => {
       setResult({ kind: "posting" });
       try {
-        const response = await fetch(exchangeUrl, {
+        const response = await fetch(exchange.exchangeUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: randomCode(), state, code_challenge: codeChallenge, token }),
+          body: JSON.stringify({
+            code: randomCode(),
+            state: exchange.state,
+            code_challenge: exchange.codeChallenge,
+            token,
+          }),
         });
         const body = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
         if (response.ok && body.ok) {
           setResult({ kind: "ok" });
-        } else {
-          setResult({ kind: "error", detail: body.error ?? `The CLI rejected the exchange (HTTP ${response.status}).` });
+          return;
         }
+        setResult({
+          kind: "error",
+          detail: body.error ?? `The CLI rejected the exchange (HTTP ${response.status}).`,
+          terminal: true,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setResult({
           kind: "error",
-          detail: `Could not reach the CLI at ${exchangeUrl}. Is \`rank login\` still running? (${message})`,
+          detail: `Could not reach the CLI at ${exchange.exchangeUrl}. It may have finished or timed out — run \`rank login\` again. (${message})`,
+          terminal: true,
         });
       }
     },
-    [exchangeUrl, state, codeChallenge],
+    [],
   );
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || startedRef.current) {
-      return;
-    }
-    
-    if (!exchangeConfigured) {
-      setResult({
-        kind: "error",
-        detail: "You are signed in, but this page lost its exchange parameters. Run `rank login` again and open the new URL it prints.",
-      });
-      return;
-    }
-    
-    startedRef.current = true;
-    getToken().then((token) => {
-      if (token) {
-        void attemptExchange(token);
-      } else {
-        setResult({ kind: "error", detail: "Clerk reported a session but returned no token. Try signing out and back in." });
-      }
-    });
-  }, [isLoaded, isSignedIn, exchangeConfigured, attemptExchange]);
+    if (!isLoaded) return;
+    if (!pending) return;
 
-  // The in-app SignIn honors the same-origin ?redirectUrl= we carry, which is
-  // what gets this exchange URL revisited after the Clerk round-trip.
-  // Declared before the isLoaded early return below: a hook that only runs on
-  // some renders makes the hook count vary, which React rejects with
-  // "Rendered more hooks than during the previous render" (#310).
+    if (!isSignedIn) {
+      // Hand off to the sign-in route. `pending` is already mirrored into
+      // sessionStorage, so returning to /cli needs no query string at all.
+      window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent("/cli")}`);
+      return;
+    }
+
+    setResult({ kind: "idle" });
+    // getToken is deliberately not a dependency: useAuth hands back a fresh
+    // reference each render, and depending on it re-ran this effect forever.
+    // Reading it at call time always yields the current session.
+    let cancelled = false;
+    void getToken().then((token) => {
+      if (cancelled) return;
+      if (!token) {
+        setResult({
+          kind: "error",
+          detail: "Clerk reported a session but returned no token. Sign out and back in, then try again.",
+          terminal: false,
+        });
+        return;
+      }
+      void postExchange(pending, token).then(() => {
+        // Either way the one-shot listener is spent, so stop advertising a
+        // pending run to the next visit. An in-memory `pending` survives for
+        // "Try again" on this page.
+        clearStoredExchange();
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, pending, postExchange, attempt]);
+
   const handleSignIn = useCallback(() => {
-    const target = window.location.pathname + window.location.search;
-    window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent(target)}`);
+    window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent("/cli")}`);
   }, []);
 
-  if (!isLoaded) return <CliLoginLoading />;
+  if (!isLoaded) return <OnboardingAuthLoading>Loading sign-in…</OnboardingAuthLoading>;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f8f8f8] px-4 py-12 text-[#1a1a19]">
-      <div className="w-full max-w-md rounded-[2rem] border border-black/5 bg-white p-8 shadow-[0_20px_60px_rgba(26,26,25,0.08)] sm:p-10">
-        <Link to="/" aria-label="Rank home" className="mb-8 inline-block">
-          <img src="/logo.svg" alt="Rank" className="size-12 rounded-xl object-contain" />
-        </Link>
-        <h1 className="mb-2 text-2xl font-black text-[#1a1a19]">Authorize rank CLI</h1>
-        <p className="mb-6 text-sm leading-relaxed text-slate-500">
-          Sign in to connect the <code className="font-semibold">rank</code> command on this device. Your session
-          token is sent only to the local loopback listener started by{" "}
-          <code className="font-semibold">rank login</code> — never to a web server.
-        </p>
+    <OnboardingSplit title="Authorize rank CLI">
+      <p className={splitControl.note}>
+        Sign in to connect the <code className={splitControl.code}>rank</code> command on this device. Your session
+        token is sent only to the local loopback listener started by{" "}
+        <code className={splitControl.code}>rank login</code> — never to a web server.
+      </p>
 
-        {!isSignedIn ? (
-          <div>
-            <button
-              type="button"
-              onClick={() => void handleSignIn()}
-              className="h-12 w-full rounded-xl bg-[#2A8CFF] text-sm font-bold text-white shadow-none transition hover:bg-[#1F6FE6]"
-            >
-              Sign in to continue
-            </button>
-            <p className="mt-3 text-xs text-slate-400">
-              {exchangeConfigured ? "You will return to this page after signing in." : ""}
-            </p>
-          </div>
+      <div className="mt-4">
+        {!pending ? (
+          <SplitNotice tone="info" title="No login is waiting">
+            This page has no pending <code className={splitControl.code}>rank login</code> request. Run{" "}
+            <code className={splitControl.code}>rank login</code> in your terminal and open the URL it prints.
+          </SplitNotice>
+        ) : !isSignedIn ? (
+          <button type="button" onClick={handleSignIn} className={splitControl.primary}>
+            Sign in to continue
+          </button>
         ) : (
           <div role="status" aria-live="polite">
-            {result.kind === "idle" && <p className="text-sm text-slate-500">Preparing the local exchange…</p>}
+            {result.kind === "idle" && <SplitNotice tone="info">Preparing the local exchange…</SplitNotice>}
             {result.kind === "posting" && (
-              <p className="text-sm text-slate-500">Sending the session proof to the CLI (127.0.0.1)…</p>
+              <SplitNotice tone="info">Sending the session proof to the CLI (127.0.0.1)…</SplitNotice>
             )}
             {result.kind === "ok" && (
-              <p className="text-sm font-semibold text-emerald-600">
-                Authorized. You can close this window and return to your terminal.
-              </p>
+              <SplitNotice tone="success" title="Authorized">
+                You can close this window and return to your terminal.
+              </SplitNotice>
             )}
             {result.kind === "error" && (
               <div>
-                <p className="text-sm font-semibold text-red-600">{result.detail}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    startedRef.current = false;
-                    setResult({ kind: "idle" });
-                  }}
-                  className="mt-4 h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Try again
-                </button>
+                <SplitNotice tone="error" title="Could not authorize the CLI">
+                  {result.detail}
+                </SplitNotice>
+                {!result.terminal && (
+                  <button type="button" onClick={() => setAttempt((n) => n + 1)} className={`mt-4 ${splitControl.secondary}`}>
+                    Try again
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
-
-        <Link
-          to="/"
-          className="mt-8 inline-block text-sm font-semibold text-slate-500 underline decoration-dashed underline-offset-4 hover:text-slate-800"
-        >
-          Back to Rank
-        </Link>
       </div>
-    </main>
+    </OnboardingSplit>
   );
 }
 
