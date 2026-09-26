@@ -7,6 +7,10 @@
   line-height: 0.9;
   text-align: center;
   text-wrap: balance;
+  /* A defined stacking context for the headline, so the negative z-index
+     pseudo-elements below have a known ancestor to resolve against rather than
+     whichever ancestor happens to enclose them. */
+  isolation: isolate;
 }
 
 .text-scrambler__line {
@@ -34,6 +38,171 @@
   color: inherit !important;
   opacity: 1 !important;
   transition: none !important;
+}
+
+/*
+ * Two-tone outline on the letters that are mid-scramble: a white ring inside a
+ * black one.
+ *
+ * Drawn with -webkit-text-stroke on stacked pseudo-elements rather than with
+ * text-shadow. Shadows are blurred copies painted behind the glyph, so they are
+ * not antialiased against the letterform and they bleed sideways — and this
+ * headline is set at a negative letter-spacing, so the gaps between letters are
+ * narrower than a shadow ring and neighbouring rings collided. A stroke is
+ * rasterised as part of the glyph, which antialiases correctly and cannot travel
+ * beyond the letter's own advance.
+ *
+ * Two elements rather than paint-order, because paint-order is not dependable on
+ * HTML text across browsers, and a single stroke can only be one colour. The
+ * thicker black ring goes on ::before and the thinner white ring on ::after, so
+ * ::after composites over it; the element's own glyph then paints over both,
+ * covering the inner half of each stroke and leaving white inside black.
+ *
+ * The pseudo-elements hang off the outer character span, not the inner one. The
+ * inner span is rendered by torph, which does not reliably pass through
+ * attributes, and an attr() that resolves to empty gives the pseudo-elements no
+ * content — which is an outline that is silently not drawn at all.
+ *
+ * Widths are in em so the rings scale with the headline, which is a clamp().
+ *
+ * Each ring's outward reach is half its width, and both must stay inside the
+ * character's own padding-inline, or the two rings of neighbouring letters meet.
+ * At 0.2em black that leaves 0.1em of reach against 0.14em of padding.
+ */
+/*
+ * The outline is an outward stroke, and that is what constrains it.
+ *
+ * The characters are flex items — .text-scrambler__word is an inline-flex row —
+ * and letter-spacing does not position flex items, so within a word they sit
+ * flush and the only gap is whatever side bearing the glyphs happen to carry.
+ * A stroke is centred on the glyph outline and only its outer half shows, so a
+ * ring of width w eats w/2 into that gap on each side.
+ *
+ * That leaves three mutually exclusive options, and only one of them keeps the
+ * typography intact:
+ *
+ *   1. A thin ring that fits the gap. Nothing moves, nothing overlaps. This is
+ *      what the widths below do.
+ *   2. A thick ring, which needs the gap to grow. Adding margin does that, but it
+ *      spaces the whole headline out — and reserving it only on scrambling
+ *      letters is worse still, since each letter jumps sideways as it starts.
+ *   3. A thick ring with no gap, which overlaps the neighbouring letters.
+ *
+ * A ring that is both thick and invisible to layout is not available: text-stroke
+ * is always centred on the outline, so it cannot be drawn inward into the
+ * glyph's own stroke weight. An inner ring needs an erode, which CSS text cannot
+ * do — it would take an SVG filter.
+ *
+ * On the stacking of the resting outline: these characters deliberately have no
+ * stacking context of their own. All of their white rings therefore resolve to
+ * the one shared ancestor context at the same level, where they lie beneath
+ * every glyph in the headline. Giving every character its own context is what
+ * stacked them — the contexts composite in document order, so each ring painted
+ * over the previous letter's letterform. Only scrambling characters isolate, and
+ * only because their black and white rings must stay paired.
+ */
+.text-scrambler__character {
+  position: relative;
+}
+
+/*
+ * Shared shape of every ring: an absolutely positioned, transparent copy of the
+ * glyph, stroked rather than filled, sitting behind the real letter.
+ */
+.text-scrambler__character::before,
+.text-scrambler__character::after {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: transparent;
+  pointer-events: none;
+  white-space: pre;
+}
+
+/*
+ * Resting ring: a thick white outline on every letter that is not scrambling.
+ *
+ * Per character rather than toggled on the heading, because a heading-level rule
+ * disappears the moment any one letter starts scrambling — taking the outline
+ * off every other letter with it. Keyed off the character, the rest of the
+ * headline keeps its border while a few letters change.
+ *
+ * The characters are flex items sitting flush, so these rings meet and merge in
+ * the gaps: the result is one continuous border around the headline rather than a
+ * ring around each letter.
+ *
+ * Drawn as a pseudo-element rather than a stroke on the character itself,
+ * because a stroke is centred on the glyph outline and would need paint-order to
+ * avoid painting over the fill. paint-order is not dependable on HTML text across
+ * browsers, and when it is ignored the white eats the letters from the inside —
+ * the outline ends up over the text instead of behind it. A separate element
+ * behind the glyph cannot do that.
+ */
+.text-scrambler__character:not([data-scrambling])::before {
+  content: attr(data-char);
+  /* Same as the hero's paper background, so the ring reads as a cutout
+     separating the letters from whatever sits behind the headline rather than
+     as a colour of its own. */
+  -webkit-text-stroke: 0.16em #f8f8f8;
+  /* The bottom layer of the three. Active letters' rings — black at -2, white
+     at -1 — paint over this, so a scrambling letter and its outline sit visibly
+     above the resting border of its neighbours. All three are negative, so every
+     glyph still paints above all of them. */
+  z-index: -3;
+}
+
+.text-scrambler__character[data-scrambling] {
+  position: relative;
+  /* No stacking context here, on purpose. The rings below carry positive
+     z-index and must all land in the headline's one shared context — that is
+     what puts every active outline on the same layer, above all the resting
+     text. Isolating each letter instead traps its pair, and the trapped units
+     then composite in document order, which is the stacking being reported. */
+}
+
+.text-scrambler__character[data-scrambling] .text-scrambler__character-inner {
+  position: relative;
+  /* Top slot in the headline context, explicitly. The rings below carry
+     positive z-index so they sit over the resting text, and without this the
+     scaled glyph would paint as ordinary in-flow content — underneath its own
+     rings. */
+  z-index: 3;
+  transform: scale(1.18);
+  /* Origin left at its default centre, so the letter grows about its own middle
+     and stays on its position instead of shifting sideways out of the word. */
+  transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.text-scrambler__character[data-scrambling]::before,
+.text-scrambler__character[data-scrambling]::after {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: transparent;
+  pointer-events: none;
+  white-space: pre;
+  /* Matches the glyph's scale, about the same centre, so the ring tracks the
+     letter as it grows rather than staying behind at the resting size. */
+  transform: scale(1.18);
+  transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.text-scrambler__character[data-scrambling]::before {
+  content: attr(data-char);
+  -webkit-text-stroke: 0.2em #000000;
+  /* Positive, and shared with every other active letter in the headline
+     context. That is what puts the whole active outline above the resting text
+     on a single layer, rather than one letter's rings stacking over the last. */
+  z-index: 1;
+}
+
+.text-scrambler__character[data-scrambling]::after {
+  content: attr(data-char);
+  -webkit-text-stroke: 0.1em #ffffff;
+  /* One above the black, globally. Every letter's white ring therefore sits over
+     every letter's black ring, which is the same uniform ordering as the rings
+     themselves — no per-letter trapping, no interleave. */
+  z-index: 2;
 }
 
 @media (max-width: 640px) {
