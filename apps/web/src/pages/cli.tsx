@@ -105,14 +105,17 @@ export function CliLoginPage() {
     });
   }, [isLoaded, isSignedIn, exchangeConfigured, attemptExchange]);
 
-  if (!isLoaded) return <CliLoginLoading />;
-
   // The in-app SignIn honors the same-origin ?redirectUrl= we carry, which is
   // what gets this exchange URL revisited after the Clerk round-trip.
+  // Declared before the isLoaded early return below: a hook that only runs on
+  // some renders makes the hook count vary, which React rejects with
+  // "Rendered more hooks than during the previous render" (#310).
   const handleSignIn = useCallback(() => {
     const target = window.location.pathname + window.location.search;
     window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent(target)}`);
   }, []);
+
+  if (!isLoaded) return <CliLoginLoading />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f8f8f8] px-4 py-12 text-[#1a1a19]">
