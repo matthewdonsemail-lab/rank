@@ -172,6 +172,16 @@
       "purpose": "Deployment URL for local scripts and telemetry. Not read by Convex functions."
     },
     {
+      "name": "RANK_AUTH_TOKEN",
+      "secret": true,
+      "required": false,
+      "scope": "local",
+      "stage": "local tooling",
+      "consumedBy": ["packages/rank-core/src/prospect/prospect.ts", "packages/rank-mcp/src/mcp/tools.ts"],
+      "fallback": null,
+      "purpose": "Clerk session token for the calling identity. Local tooling never mints identities; without it authenticated operations fail closed."
+    },
+    {
       "name": "PORT",
       "secret": false,
       "required": false,

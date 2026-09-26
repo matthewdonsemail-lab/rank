@@ -21,4 +21,4 @@ export interface Command {
   run(context: CommandContext, argv: string[]): Promise<CommandResult> | CommandResult;
 }
 
-export type CommandName = "doctor" | "env" | "help";
+export type CommandName = "doctor" | "env" | "evaluate" | "help";

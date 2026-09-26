@@ -8,12 +8,17 @@
 // that advertised names, routes, and environment references exist — it does not
 // execute the surfaces or establish that they behave identically.
 //
+// A surface marked `{ "planned": true, "reason": "..." }` declares intent
+// without an implementation. Planned surfaces satisfy the must-declare rule and
+// are skipped by the implementation-existence rules below, so deferring a
+// surface is a recorded decision rather than a gate failure.
+//
 // Verifies:
-// 1. Every capability declares a cli, mcp, and http surface
-// 2. No two capabilities share a CLI command, MCP tool, or HTTP route+method
-// 3. Every advertised MCP tool has an implementation in packages/rank-mcp
-// 4. Every advertised CLI command has an implementation in packages/rank-cli
-// 5. Every advertised HTTP route exists in convex/http.ts
+// 1. Every capability declares a cli, mcp, and http surface (planned counts)
+// 2. No two implemented surfaces share a CLI command, MCP tool, or HTTP route+method
+// 3. Every advertised, implemented MCP tool has an implementation in packages/rank-mcp
+// 4. Every advertised, implemented CLI command has an implementation in packages/rank-cli
+// 5. Every advertised, implemented HTTP route exists in convex/http.ts
 // 6. Every requiresEnv name exists in config/env-vars.json
 // 7. Every variable in config/env-vars.json is declared in convex/convex.config.ts
 //    or read by convex/auth.config.ts
@@ -45,7 +50,8 @@ if (capabilities && envVars) {
   const list = capabilities.capabilities ?? [];
   const surfaces = ['cli', 'mcp', 'http'];
 
-  // 1. Every capability declares every surface.
+  // 1. Every capability declares every surface. A planned marker counts as a
+  // declaration; it records deferred intent rather than a missing surface.
   for (const capability of list) {
     for (const surface of surfaces) {
       if (!capability.surfaces?.[surface]) {
@@ -54,15 +60,20 @@ if (capabilities && envVars) {
     }
   }
 
-  // 2. No duplicate keys within a surface.
+  const isPlanned = (entry) => entry !== undefined && entry.planned === true;
+
+  // 2. No duplicate keys within a surface. Planned surfaces have no command,
+  // tool, or route yet, so there is nothing to collide.
   const seen = new Map();
   for (const capability of list) {
     const keys = {
-      cli: capability.surfaces?.cli?.command,
-      mcp: capability.surfaces?.mcp?.tool,
-      http: capability.surfaces?.http
-        ? `${capability.surfaces.http.method} ${capability.surfaces.http.route}`
-        : undefined,
+      cli: isPlanned(capability.surfaces?.cli) ? undefined : capability.surfaces?.cli?.command,
+      mcp: isPlanned(capability.surfaces?.mcp) ? undefined : capability.surfaces?.mcp?.tool,
+      http: isPlanned(capability.surfaces?.http)
+        ? undefined
+        : capability.surfaces?.http?.method !== undefined && capability.surfaces?.http?.route !== undefined
+          ? `${capability.surfaces.http.method} ${capability.surfaces.http.route}`
+          : undefined,
     };
     for (const [surface, key] of Object.entries(keys)) {
       if (key === undefined) continue;
@@ -75,34 +86,38 @@ if (capabilities && envVars) {
     }
   }
 
-  // 3. Every advertised MCP tool is implemented.
+  // 3. Every advertised, implemented MCP tool is implemented.
   const mcpTools = readFileSync(join(root, 'packages/rank-mcp/src/mcp/tools.ts'), 'utf8');
   for (const capability of list) {
-    const tool = capability.surfaces?.mcp?.tool;
-    if (tool && !mcpTools.includes(`"${tool}"`)) {
+    const entry = capability.surfaces?.mcp;
+    const tool = entry?.tool;
+    if (tool && !isPlanned(entry) && !mcpTools.includes(`"${tool}"`)) {
       violations.push(`${capability.id}: MCP tool "${tool}" has no implementation in packages/rank-mcp/src/mcp/tools.ts`);
     }
   }
 
-  // 4. Every advertised CLI command is implemented.
+  // 4. Every advertised, implemented CLI command is implemented.
   const cliDir = join(root, 'packages/rank-cli/src/cli/commands');
   const cliSources = existsSync(cliDir)
     ? readFileSync(join(cliDir, 'doctor.ts'), 'utf8') +
       readFileSync(join(cliDir, 'env.ts'), 'utf8') +
-      (existsSync(join(cliDir, 'capabilities.ts')) ? readFileSync(join(cliDir, 'capabilities.ts'), 'utf8') : '')
+      (existsSync(join(cliDir, 'capabilities.ts')) ? readFileSync(join(cliDir, 'capabilities.ts'), 'utf8') : '') +
+      (existsSync(join(cliDir, 'evaluate.ts')) ? readFileSync(join(cliDir, 'evaluate.ts'), 'utf8') : '')
     : '';
   for (const capability of list) {
-    const command = capability.surfaces?.cli?.command;
-    if (command && !cliSources.includes(`name: "${command}"`)) {
+    const entry = capability.surfaces?.cli;
+    const command = entry?.command;
+    if (command && !isPlanned(entry) && !cliSources.includes(`name: "${command}"`)) {
       violations.push(`${capability.id}: CLI command "${command}" has no implementation in packages/rank-cli`);
     }
   }
 
-  // 5. Every advertised HTTP route exists in convex/http.ts.
+  // 5. Every advertised, implemented HTTP route exists in convex/http.ts.
   const http = readFileSync(join(root, 'convex/http.ts'), 'utf8');
   for (const capability of list) {
-    const route = capability.surfaces?.http?.route;
-    if (route && !http.includes(route)) {
+    const entry = capability.surfaces?.http;
+    const route = entry?.route;
+    if (route && !isPlanned(entry) && !http.includes(route)) {
       violations.push(`${capability.id}: HTTP route "${route}" is not registered in convex/http.ts`);
     }
   }

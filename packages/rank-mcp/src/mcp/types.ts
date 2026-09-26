@@ -2,6 +2,13 @@
 
 import type { Capability, CapabilityRegistry } from "../../../rank-core/src/capabilities/index.ts";
 
+/** One JSON Schema property in a tool input schema. */
+export interface RankToolPropertySchema {
+  /** JSON Schema type name(s). Omitted when any JSON value is accepted. */
+  type?: string | string[];
+  description: string;
+}
+
 /** A tool as advertised to an MCP client. */
 export interface RankToolDefinition {
   name: string;
@@ -10,7 +17,7 @@ export interface RankToolDefinition {
   capabilityId: string;
   inputSchema: {
     type: "object";
-    properties: Record<string, { type: string; description: string }>;
+    properties: Record<string, RankToolPropertySchema>;
     required?: string[];
     additionalProperties: false;
   };

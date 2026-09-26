@@ -2,9 +2,11 @@
  * Turn capability registry entries into MCP tool definitions.
  *
  * Pure: the tool list is derived from the registry, so the server cannot
- * advertise a capability the CLI and HTTP surfaces do not also expose.
+ * advertise a capability that is not cataloged — including planned surfaces,
+ * which are listed with their recorded status rather than hidden.
  */
 import type { Capability, CapabilityRegistry } from "../../../../rank-core/src/capabilities/index.ts";
+import { EVALUATE_PROSPECT_INPUT_SCHEMA } from "../tools.ts";
 import type { RankToolDefinition } from "../types.ts";
 
 const NO_ARGUMENTS = {
@@ -17,6 +19,14 @@ const NO_ARGUMENTS = {
 export function toolDefinitionFor(capability: Capability): RankToolDefinition | null {
   const tool = capability.surfaces.mcp?.tool;
   if (!tool) return null;
+  if (capability.id === "prospect.evaluate") {
+    return {
+      name: tool,
+      description: capability.summary,
+      capabilityId: capability.id,
+      inputSchema: EVALUATE_PROSPECT_INPUT_SCHEMA,
+    };
+  }
   return {
     name: tool,
     description: capability.summary,

@@ -1,5 +1,5 @@
 {
-  "description": "Catalog of every Rank capability and the surfaces that document it. The CLI, the MCP server, and the Convex HTTP routes are implemented separately and checked against this file; `pnpm check:surfaces` verifies names, routes, and manifest references by source inspection, not runtime parity. A shared entry means the same subject on each surface, not identical behavior — see per-surface scope notes.",
+  "description": "Catalog of every Rank capability and the surfaces that document it. The CLI, the MCP server, and the Convex HTTP routes are implemented separately and checked against this file; `pnpm check:surfaces` verifies names, routes, and manifest references by source inspection, not runtime parity. A shared entry means the same subject on each surface, not identical behavior — see per-surface scope notes. A surface marked planned is declared intent with a recorded reason, not an implementation.",
   "capabilities": [
     {
       "id": "env.doctor",
@@ -38,6 +38,19 @@
         "cli": { "command": "capabilities" },
         "mcp": { "tool": "rank_list_capabilities" },
         "http": { "route": "/rank/capabilities", "method": "GET" }
+      }
+    },
+    {
+      "id": "prospect.evaluate",
+      "title": "Evaluate one prospect",
+      "summary": "Judge one prospect against the brand and save a human-reviewable result. Evaluate and persist only: no outreach, no cross-owner reads. HTTP is deferred: no external client needs it and no authenticated public-route pattern exists yet.",
+      "stage": "judgment",
+      "mutating": true,
+      "requiresEnv": ["CONVEX_URL", "RANK_AUTH_TOKEN"],
+      "surfaces": {
+        "cli": { "command": "evaluate" },
+        "mcp": { "tool": "rank_evaluate_prospect" },
+        "http": { "planned": true, "reason": "Deferred: no external HTTP client needs this operation and no authenticated public-route pattern exists. Revisit when a non-Convex client requires it." }
       }
     }
   ]

@@ -2,8 +2,9 @@
  * Capability registry helpers.
  *
  * Pure: takes a registry, returns views and consistency gaps. The registry in
- * config/capabilities.json is the single source every surface derives from, so
- * these helpers exist to detect drift rather than to describe it.
+ * config/capabilities.json catalogs what each surface documents; implementations
+ * live in their packages and are checked against it, so these helpers exist to
+ * detect drift rather than to describe behavior.
  */
 import type { Capability, CapabilityRegistry, SurfaceGap, SurfaceName } from "./types.ts";
 
@@ -42,6 +43,10 @@ export function requiredEnv(registry: CapabilityRegistry): string[] {
  * Report capabilities that do not declare every surface, and capabilities whose
  * identifiers collide.
  *
+ * A surface marked `planned` counts as declared: it is documented intent with a
+ * recorded reason, not a gap. Collisions only consider implemented surfaces,
+ * because a planned surface has no command, tool, or route to collide yet.
+ *
  * Two capabilities must never share a CLI command, an MCP tool name, or an
  * HTTP route and method, because a consumer resolving that surface would get an
  * ambiguous answer.
@@ -63,9 +68,15 @@ export function findGaps(registry: CapabilityRegistry, expected: SurfaceName[] =
 
   const seen: Record<string, string> = {};
   const collisions: Array<[SurfaceName, (capability: Capability) => string | undefined]> = [
-    ["cli", (c) => c.surfaces.cli?.command],
-    ["mcp", (c) => c.surfaces.mcp?.tool],
-    ["http", (c) => (c.surfaces.http ? `${c.surfaces.http.method} ${c.surfaces.http.route}` : undefined)],
+    ["cli", (c) => (c.surfaces.cli?.planned ? undefined : c.surfaces.cli?.command)],
+    ["mcp", (c) => (c.surfaces.mcp?.planned ? undefined : c.surfaces.mcp?.tool)],
+    [
+      "http",
+      (c) =>
+        c.surfaces.http?.planned || c.surfaces.http?.method === undefined || c.surfaces.http?.route === undefined
+          ? undefined
+          : `${c.surfaces.http.method} ${c.surfaces.http.route}`,
+    ],
   ];
   for (const [surface, read] of collisions) {
     for (const capability of registry.capabilities) {
@@ -95,10 +106,22 @@ export function renderRegistry(registry: CapabilityRegistry): string {
     lines.push(`  ${capability.summary}`);
     lines.push(`  stage: ${capability.stage}${capability.mutating ? " (mutating)" : ""}`);
     if (capability.requiresEnv.length > 0) lines.push(`  requires: ${capability.requiresEnv.join(", ")}`);
-    const cli = capability.surfaces.cli ? `rank ${capability.surfaces.cli.command}` : null;
-    const mcp = capability.surfaces.mcp?.tool ?? null;
+    const cli = capability.surfaces.cli
+      ? capability.surfaces.cli.planned
+        ? `planned (${capability.surfaces.cli.reason ?? "no reason recorded"})`
+        : `rank ${capability.surfaces.cli.command}`
+      : null;
+    const mcp = capability.surfaces.mcp
+      ? capability.surfaces.mcp.planned
+        ? `planned (${capability.surfaces.mcp.reason ?? "no reason recorded"})`
+        : (capability.surfaces.mcp.tool ?? null)
+      : null;
     const http = capability.surfaces.http
-      ? `${capability.surfaces.http.method} ${capability.surfaces.http.route}`
+      ? capability.surfaces.http.planned
+        ? `planned (${capability.surfaces.http.reason ?? "no reason recorded"})`
+        : capability.surfaces.http.method !== undefined && capability.surfaces.http.route !== undefined
+          ? `${capability.surfaces.http.method} ${capability.surfaces.http.route}`
+          : "incomplete"
       : null;
     lines.push(`  surfaces: cli=${cli ?? "none"}, mcp=${mcp ?? "none"}, http=${http ?? "none"}`);
     lines.push("");

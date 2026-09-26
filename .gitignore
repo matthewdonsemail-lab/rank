@@ -4,9 +4,12 @@ node_modules/
 __pycache__/
 *.py[cod]
 *$py.class
+# Python virtualenvs. Root-anchored on purpose: a bare `env/` would also match
+# source directories such as packages/rank-core/src/env/, silently dropping
+# tracked source from fresh clones while local runs keep passing.
 .venv/
 venv/
-env/
+/env/
 
 # Environment & Secrets
 .env

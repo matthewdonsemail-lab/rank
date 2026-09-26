@@ -6,15 +6,27 @@ export type HttpMethod = "GET" | "POST";
 
 export interface CliSurface {
   command: string;
+  /** Set when the surface is declared intent, not an implementation. */
+  planned?: boolean;
+  /** Why the surface is planned rather than implemented. Required when planned. */
+  reason?: string;
 }
 
 export interface McpSurface {
   tool: string;
+  /** Set when the surface is declared intent, not an implementation. */
+  planned?: boolean;
+  /** Why the surface is planned rather than implemented. Required when planned. */
+  reason?: string;
 }
 
 export interface HttpSurface {
-  route: string;
-  method: HttpMethod;
+  route?: string;
+  method?: HttpMethod;
+  /** Set when the surface is declared intent, not an implementation. */
+  planned?: boolean;
+  /** Why the surface is planned rather than implemented. Required when planned. */
+  reason?: string;
 }
 
 export interface CapabilitySurfaces {
