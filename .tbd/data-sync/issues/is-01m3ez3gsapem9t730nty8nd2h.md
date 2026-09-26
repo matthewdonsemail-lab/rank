@@ -3,9 +3,9 @@ type: is
 id: is-01m3ez3gsapem9t730nty8nd2h
 title: prospect.evaluate shared operation slice
 kind: epic
-status: open
+status: closed
 priority: 1
-version: 11
+version: 12
 labels: []
 dependencies: []
 child_order_hints:
@@ -20,6 +20,10 @@ child_order_hints:
   - is-01m3ez4xdw9y5259ekwgxwq7mj
   - is-01m3ez4yer8ym5f4ag6esktmfy
 created_at: 2026-09-26T13:40:04.010Z
-updated_at: 2026-09-26T13:40:50.776Z
+updated_at: 2026-09-26T15:06:36.618Z
+closed_at: 2026-09-26T15:06:36.618Z
+close_reason: null
+resolution: null
+duplicate_of: null
 ---
 One Rank workflow (prospect.evaluate) as a shared operation with thin CLI/MCP adapters, an explicit HTTP decision, parity tests, and matching docs. Contract before code; adapters translate transport only; Convex remains the authority.
