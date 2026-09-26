@@ -14,7 +14,8 @@ import type {
 /**
  * Resolve every manifest variable.
  *
- * Precedence is process, then env file, then the Convex deployment. The
+ * Precedence is process, then the `.rank/` home (stored session token, then
+ * connection config), then the env file, then the Convex deployment. The
  * deployment is consulted because that is where Convex reads app and auth
  * variables from, so a value set with `convex env set` must count as present
  * even when nothing local defines it. `local` scope variables ignore the
@@ -22,6 +23,8 @@ import type {
  */
 export function resolveEnv(manifest: EnvManifest, sources: EnvSources = {}): ResolvedVar[] {
   const processEnv = sources.process ?? {};
+  const sessionEnv = sources.session ?? {};
+  const rankEnv = sources.rank ?? {};
   const fileEnv = sources.file ?? {};
   const deploymentEnv = sources.deployment ?? {};
 
@@ -33,6 +36,8 @@ export function resolveEnv(manifest: EnvManifest, sources: EnvSources = {}): Res
     };
 
     consider("process", processEnv);
+    consider("session", sessionEnv);
+    consider("rank", rankEnv);
     consider("env-file", fileEnv);
     if (spec.scope !== "local") consider("deployment", deploymentEnv);
 

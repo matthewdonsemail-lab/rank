@@ -5,6 +5,7 @@
 import { readDeploymentEnv } from "../../../../rank-core/src/convex/index.ts";
 import { buildReport, exitCodeFor, renderReport, resolveEnv } from "../../../../rank-core/src/env/index.ts";
 import type { EnvManifest } from "../../../../rank-core/src/env/types.ts";
+import { loadRankHome, rankHomeEnvSources } from "../../../../rank-core/src/rank-home/index.ts";
 import { asManifest, loadWorkspace } from "../../../../rank-core/src/workspace/index.ts";
 import type { Command } from "../types.ts";
 
@@ -50,10 +51,14 @@ export const doctorCommand: Command = {
     const workspace = loadWorkspace(context.root);
     const manifest = asManifest(workspace);
     const deployment = readDeploymentEnv({ cwd: context.root, include: !options.local });
+    const home = loadRankHome(context.root);
+    const homeSources = rankHomeEnvSources(home, context.processEnv["CONVEX_URL"] ?? home.config?.convexUrl);
 
     const report = buildReport(
       resolveEnv(manifest, {
         process: context.processEnv,
+        session: homeSources.session,
+        rank: homeSources.rank,
         file: workspace.envFile,
         deployment: deployment.env ?? {},
       }),
@@ -67,6 +72,7 @@ export const doctorCommand: Command = {
 
     context.out(renderReport(manifest, report));
     const sources = [
+      homeSessionsPathIfUsed(home, homeSources),
       workspace.envFileExists ? workspace.paths.envFilePath : null,
       "the process environment",
       deployment.env !== null ? "the linked deployment" : null,
@@ -75,3 +81,9 @@ export const doctorCommand: Command = {
     return { code: exitCodeFor(report) };
   },
 };
+
+function homeSessionsPathIfUsed(home: ReturnType<typeof loadRankHome>, sources: ReturnType<typeof rankHomeEnvSources>): string | null {
+  if (sources.session) return `${home.paths.dir}/sessions.json`;
+  if (sources.rank) return `${home.paths.dir}/config.json`;
+  return null;
+}

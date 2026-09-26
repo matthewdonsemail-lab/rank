@@ -35,12 +35,19 @@ export type EnvSource = Record<string, string | undefined>;
 /**
  * Where a resolved value came from. Convex reads app and auth variables from
  * the deployment, so `deployment` is a real origin and not a special case.
+ * `session` and `rank` come from the local `.rank/` home: `session` is the
+ * machine-stored Clerk token (`rank login`), `rank` is non-secret connection
+ * config kept alongside it.
  */
-export type EnvOrigin = "process" | "env-file" | "deployment" | "unset";
+export type EnvOrigin = "process" | "session" | "rank" | "env-file" | "deployment" | "unset";
 
 export interface EnvSources {
   /** Process environment. Highest precedence so one command can override. */
   process?: EnvSource;
+  /** Machine-stored `.rank/sessions.json` token (rank login). */
+  session?: EnvSource;
+  /** Non-secret `.rank/config.json` connection config. */
+  rank?: EnvSource;
   /** Parsed dotenv file, normally .env.local. */
   file?: Record<string, string>;
   /** Variables set on the linked Convex deployment. */

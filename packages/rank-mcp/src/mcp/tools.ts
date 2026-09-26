@@ -10,6 +10,7 @@
  */
 import { renderRegistry } from "../../../rank-core/src/capabilities/index.ts";
 import { buildReport, renderManifest, renderReport, resolveEnv } from "../../../rank-core/src/env/index.ts";
+import { loadRankHome, rankHomeEnvSources, effectiveProcessEnv } from "../../../rank-core/src/rank-home/index.ts";
 import { asManifest, asRegistry, loadWorkspace } from "../../../rank-core/src/workspace/index.ts";
 import { evaluateProspect } from "../../../rank-core/src/prospect/index.ts";
 import type {
@@ -23,7 +24,16 @@ import type { RankToolDefinition, ToolImplementation } from "./types.ts";
 function doctor(root: string, processEnv: Record<string, string | undefined>): string {
   const workspace = loadWorkspace(root);
   const manifest = asManifest(workspace);
-  const report = buildReport(resolveEnv(manifest, { process: processEnv, file: workspace.envFile }));
+  const home = loadRankHome(root);
+  const homeSources = rankHomeEnvSources(home, processEnv["CONVEX_URL"] ?? home.config?.convexUrl);
+  const report = buildReport(
+    resolveEnv(manifest, {
+      process: processEnv,
+      session: homeSources.session,
+      rank: homeSources.rank,
+      file: workspace.envFile,
+    }),
+  );
   return renderReport(manifest, report);
 }
 
@@ -125,15 +135,17 @@ export function createEvaluateProspectTool(
       inputSchema: EVALUATE_PROSPECT_INPUT_SCHEMA,
     },
     run: async (args, context) => {
-      // MCP has no flags: both values come from env. They are passed
-      // explicitly so the tool stays pure with respect to globals.
-      const deploymentUrl = context.processEnv["CONVEX_URL"];
+      // MCP has no flags: values come from the process environment, with the
+      // local `.rank/` home as the fallback. Both are passed explicitly so the
+      // tool stays pure with respect to globals.
+      const env = effectiveProcessEnv(context.root, context.processEnv);
+      const deploymentUrl = env["CONVEX_URL"];
       if (!deploymentUrl) {
-        return "rank_evaluate_prospect misconfigured: set CONVEX_URL to the Convex deployment URL.";
+        return "rank_evaluate_prospect misconfigured: set CONVEX_URL to the Convex deployment URL (or sign in with `rank login`).";
       }
-      const authToken = context.processEnv["RANK_AUTH_TOKEN"];
+      const authToken = env["RANK_AUTH_TOKEN"];
       if (!authToken) {
-        return "rank_evaluate_prospect misconfigured: set RANK_AUTH_TOKEN to a Clerk session token. Local tooling never mints identities.";
+        return "rank_evaluate_prospect misconfigured: set RANK_AUTH_TOKEN to a Clerk session token, or run `rank login`. Local tooling never mints identities.";
       }
       if (typeof args !== "object" || args === null) {
         return "rank_evaluate_prospect failed [input]: prospect must be an object with a url";

@@ -57,6 +57,26 @@ function AuthLoading() {
   );
 }
 
+/**
+ * Post-sign-in destination. Same-origin `?redirectUrl=` wins (used by
+ * /cli-login to return to its exchange URL); everything else lands on home.
+ */
+function signOutRedirectTarget(): string {
+  const params = new URLSearchParams(window.location.search);
+  const redirectUrl = params.get("redirectUrl");
+  if (redirectUrl) {
+    try {
+      const target = new URL(redirectUrl, window.location.origin);
+      if (target.origin === window.location.origin) {
+        return target.pathname + target.search;
+      }
+    } catch {
+      // Not a parsable URL: fall through to home.
+    }
+  }
+  return "/";
+}
+
 function useSignedOutGate() {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <AuthLoading />;
@@ -74,7 +94,7 @@ export function SignInRoute() {
         routing="path"
         path="/sign-in"
         signUpUrl="/sign-up"
-        forceRedirectUrl="/"
+        forceRedirectUrl={signOutRedirectTarget()}
         appearance={appearance}
       />
       <Link

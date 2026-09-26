@@ -10,10 +10,22 @@ import { doctorCommand } from "./commands/doctor.ts";
 import { envCommand } from "./commands/env.ts";
 import { evaluateCommand } from "./commands/evaluate.ts";
 import { installCommand } from "./commands/install.ts";
+import { launchCommand } from "./commands/launch.ts";
+import { loginCommand, logoutCommand, whoamiCommand } from "./commands/login.ts";
 import { renderUsage } from "./helpers/usage.ts";
 import type { Command, CommandContext } from "./types.ts";
 
-export const COMMANDS: Command[] = [installCommand, doctorCommand, envCommand, capabilitiesCommand, evaluateCommand];
+export const COMMANDS: Command[] = [
+  launchCommand,
+  installCommand,
+  loginCommand,
+  logoutCommand,
+  whoamiCommand,
+  doctorCommand,
+  envCommand,
+  capabilitiesCommand,
+  evaluateCommand,
+];
 
 const ALIASES: Record<string, string> = {
   "--help": "help",

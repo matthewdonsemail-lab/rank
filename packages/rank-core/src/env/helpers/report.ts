@@ -17,6 +17,8 @@ const STATUS = {
 
 const ORIGIN_LABELS: Record<string, string> = {
   process: "process env",
+  session: ".rank session",
+  rank: ".rank config",
   "env-file": ".env.local",
   deployment: "deployment",
 };

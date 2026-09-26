@@ -52,6 +52,45 @@
         "mcp": { "tool": "rank_evaluate_prospect" },
         "http": { "planned": true, "reason": "Deferred: no external HTTP client needs this operation and no authenticated public-route pattern exists. Revisit when a non-Convex client requires it." }
       }
+    },
+    {
+      "id": "auth.login",
+      "title": "Sign in and store the session",
+      "summary": "Sign in via the web app (PKCE browser flow over a one-shot loopback exchange) or store a pasted Clerk token, validate it against the linked deployment, then persist it in the gitignored .rank/ home. Never writes to .env.local or the process environment, and never prints the token in full.",
+      "stage": "local tooling",
+      "mutating": true,
+      "requiresEnv": [],
+      "surfaces": {
+        "cli": { "command": "login" },
+        "mcp": { "planned": true, "reason": "Deferred: browser sign-in and token storage are a local operator action bound to the .rank/ home; a stdio tool can open no browser and holding secrets in MCP arguments would defeat the home. Revisit if an agent flow needs token injection without a terminal." },
+        "http": { "planned": true, "reason": "Deferred: the browser half of the exchange is a web-app route (apps/web /cli-login), not a Convex HTTP API. A public route trading Clerk session tokens would weaken the credential's locality." }
+      }
+    },
+    {
+      "id": "auth.logout",
+      "title": "Sign out the stored session",
+      "summary": "Remove the .rank/sessions.json entry for a deployment (the sole stored one when unambiguous), optionally deleting the now-empty file. No network call: the token is local state, and the deployment needs no notification because Clerk sessions remain revocable in the web app.",
+      "stage": "local tooling",
+      "mutating": true,
+      "requiresEnv": [],
+      "surfaces": {
+        "cli": { "command": "logout" },
+        "mcp": { "planned": true, "reason": "Deferred: same operator-local action as auth.login; see that entry's reason." },
+        "http": { "planned": true, "reason": "Deferred: same as auth.login; deleting local state is not a public API concern." }
+      }
+    },
+    {
+      "id": "auth.whoami",
+      "title": "Show and verify the stored session",
+      "summary": "Report which deployment the .rank/ session is bound to, when it was logged in, and a masked token, then prove the token still works by calling the owner-gated listProspectEvaluationRuns query. Exit 1 (and a clear re-login hint) when the deployment rejects the stored token.",
+      "stage": "local tooling",
+      "mutating": false,
+      "requiresEnv": [],
+      "surfaces": {
+        "cli": { "command": "whoami" },
+        "mcp": { "planned": true, "reason": "Deferred: diagnostics belong to rank_doctor, which already resolves .rank/ as an env source. Revisit if per-session status is needed without the full preflight." },
+        "http": { "planned": true, "reason": "Deferred: session status is local state; rank/status already covers deployment visibility." }
+      }
     }
   ]
 }

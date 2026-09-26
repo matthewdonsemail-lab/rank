@@ -8,6 +8,7 @@
  * cannot disagree with the contract in docs/contracts/prospect-evaluate.md.
  */
 import { evaluateProspect } from "../../../../rank-core/src/prospect/index.ts";
+import { effectiveProcessEnv } from "../../../../rank-core/src/rank-home/index.ts";
 import type {
   ProspectEvaluateError,
   ProspectEvaluationRun,
@@ -189,11 +190,12 @@ export async function runEvaluate(context: CommandContext, argv: string[]): Prom
     }
   }
 
-  // Flags first, then the process environment. Anything still undefined falls
-  // through to the operation's own CONVEX_URL / RANK_AUTH_TOKEN lookup, which
-  // reads the same environment in production.
-  const deploymentUrl = opts.deployment ?? context.processEnv["CONVEX_URL"];
-  const authToken = opts.token ?? context.processEnv["RANK_AUTH_TOKEN"];
+  // Flags first, then the process environment, then the local `.rank/` home
+  // (stored session token and connection config). Anything still undefined
+  // falls through to the operation's own lookup.
+  const env = effectiveProcessEnv(context.root, context.processEnv);
+  const deploymentUrl = opts.deployment ?? env["CONVEX_URL"];
+  const authToken = opts.token ?? env["RANK_AUTH_TOKEN"];
 
   // The operation contract says it throws nothing, but a transport seam that
   // lets an exception escape would crash the process with a stack trace. Catch

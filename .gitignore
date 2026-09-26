@@ -15,6 +15,9 @@ venv/
 .env
 .env.local
 .env.*.local
+# Local Rank session home (stored Clerk token + connection config).
+# Root-anchored on purpose, like /env/ above: never a source directory.
+/.rank/
 *.pem
 *.key
 
@@ -41,6 +44,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Local-only test tooling (never commit: personal PC cmdlets, scratch installs)
+.local/
+rank-local*
 # External Documentation (pulled locally via scripts, ignored from git)
 docs/typesafe/
 docs/convex/*

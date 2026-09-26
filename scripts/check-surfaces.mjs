@@ -111,7 +111,8 @@ if (capabilities && envVars) {
     ? readFileSync(join(cliDir, 'doctor.ts'), 'utf8') +
       readFileSync(join(cliDir, 'env.ts'), 'utf8') +
       (existsSync(join(cliDir, 'capabilities.ts')) ? readFileSync(join(cliDir, 'capabilities.ts'), 'utf8') : '') +
-      (existsSync(join(cliDir, 'evaluate.ts')) ? readFileSync(join(cliDir, 'evaluate.ts'), 'utf8') : '')
+      (existsSync(join(cliDir, 'evaluate.ts')) ? readFileSync(join(cliDir, 'evaluate.ts'), 'utf8') : '') +
+      (existsSync(join(cliDir, 'login.ts')) ? readFileSync(join(cliDir, 'login.ts'), 'utf8') : '')
     : '';
   for (const capability of list) {
     const entry = capability.surfaces?.cli;

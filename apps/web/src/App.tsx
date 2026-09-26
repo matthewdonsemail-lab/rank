@@ -3,6 +3,7 @@ import { Header, type HeaderItem } from "./landing/Header";
 import { Hero } from "./landing/hero";
 import { MessagingPlatform } from "./landing/MessagingPlatform";
 import { SignInRoute, SignUpRoute } from "./pages/auth";
+import { CliLoginPage } from "./pages/cli-login";
 
 type AppProps = {
   authEnabled?: boolean;
@@ -51,6 +52,10 @@ export function App({ authEnabled = false, isSignedIn = false }: AppProps) {
         <Route
           path="/sign-up/*"
           element={authEnabled ? <SignUpRoute /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/cli-login"
+          element={authEnabled ? <CliLoginPage /> : <Navigate to="/" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

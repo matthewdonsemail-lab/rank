@@ -95,6 +95,32 @@ Every active stage can fail, retry, and cancel. Completed prospect decisions rem
 - **AgentMail:** Mounted transport and inbound-message component; Rank wraps it with stateful thread labels and delivery idempotency.
 - **User domains:** Rank stores verified/warming domains and prefixed shared inboxes for pool selection; live DNS and provider credentials are not configured here.
 
+## Install
+
+The CLI package is currently private (`packages/rank-cli`), so these one-liners
+activate on publish. Placeholders use `{{package}} = @rank/cli` and
+`{{install-url}} = the published PowerShell bootstrap URL`.
+
+```bash
+npx -y {{package}}@latest launch
+bunx --bun {{package}}@latest launch
+```
+
+```powershell
+irm {{install-url}} | iex
+```
+
+Until then, run from a checkout (requires Bun, see `rank install`):
+
+```powershell
+bun run packages/rank-cli/bin/rank.ts launch
+bun run packages/rank-cli/bin/rank.ts doctor
+```
+
+Local PowerShell cmdlets (`Invoke-RankLaunch`, `Update-Rank`, etc.) are a
+personal testing convenience only: they live under the gitignored `.local/`
+directory and are never committed.
+
 ## Quick Start
 
 ```bash

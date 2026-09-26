@@ -216,8 +216,11 @@ describe("prospect.evaluate cross-adapter parity", () => {
     const mcpSeen: Array<{ prospect: unknown; options: unknown }> = [];
     const stub: EvaluateProspectResult = { ok: true, run: RUN };
 
-    // Common-subset fields only: the CLI has no --content/--metrics flags, so
-    // full-schema inputs cannot be expressed there (see final report).
+    // Full contract input: every prospect field from
+    // docs/contracts/prospect-evaluate.md plus sourceDiscoveryRunId. CLI
+    // expresses metrics as a JSON string (--metrics '<json>'); MCP passes the
+    // decoded value. Both must arrive at the shared operation identically.
+    const metrics = { score: 3 };
     await driveCli(
       stub,
       [
@@ -225,8 +228,22 @@ describe("prospect.evaluate cross-adapter parity", () => {
         "https://example.com/parity",
         "--title",
         "Parity",
+        "--description",
+        "Parity description",
+        "--source-domain",
+        "source.example",
+        "--anchor-text",
+        "click here",
+        "--target-domain",
+        "shop.example",
+        "--fit-rationale",
+        "fits brand",
         "--brand-summary",
         "Brand",
+        "--content",
+        "excerpt content",
+        "--metrics",
+        JSON.stringify(metrics),
         "--discovery-run",
         "disc_parity_9",
         "--json",
@@ -238,7 +255,14 @@ describe("prospect.evaluate cross-adapter parity", () => {
       {
         url: "https://example.com/parity",
         title: "Parity",
+        description: "Parity description",
+        sourceDomain: "source.example",
+        anchorText: "click here",
+        targetDomain: "shop.example",
+        fitRationale: "fits brand",
         brandSummary: "Brand",
+        content: "excerpt content",
+        metrics,
         sourceDiscoveryRunId: "disc_parity_9",
       },
       mcpSeen,
@@ -250,7 +274,14 @@ describe("prospect.evaluate cross-adapter parity", () => {
     expect(cliSeen[0]?.prospect).toEqual({
       url: "https://example.com/parity",
       title: "Parity",
+      description: "Parity description",
+      sourceDomain: "source.example",
+      anchorText: "click here",
+      targetDomain: "shop.example",
+      fitRationale: "fits brand",
       brandSummary: "Brand",
+      content: "excerpt content",
+      metrics,
     });
     expect(cliSeen[0]?.options).toEqual(mcpSeen[0]?.options);
     expect(cliSeen[0]?.options).toEqual({

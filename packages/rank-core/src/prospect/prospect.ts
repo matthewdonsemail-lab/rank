@@ -6,8 +6,8 @@
  * here, so the three surfaces cannot disagree about what the operation does.
  */
 import { ConvexHttpClient } from "convex/browser";
-import { ConvexError } from "convex/values";
 import { validateDiscoveryRunId, validateProspectInput } from "./helpers/index.ts";
+import { convexErrorMessage, isConvexError } from "../convex/index.ts";
 import type {
   ConvexActionCaller,
   EvaluateProspectOptions,
@@ -35,12 +35,6 @@ function isRunShape(value: unknown): value is ProspectEvaluationRun {
   if (typeof record["state"] !== "string" || !RUN_STATES.has(record["state"] as string)) return false;
   if (typeof record["context"] !== "object" || record["context"] === null) return false;
   return true;
-}
-
-function convexMessage(error: unknown): string {
-  if (error instanceof ConvexError) return String(error.data ?? error.message);
-  if (error instanceof Error) return error.message;
-  return String(error);
 }
 
 /**
@@ -94,13 +88,13 @@ export async function evaluateProspect(
   try {
     raw = await caller(deploymentUrl, authToken, ACTION_PATH, args);
   } catch (error) {
-    if (error instanceof ConvexError && /authentication required/i.test(convexMessage(error))) {
+    if (isConvexError(error) && /authentication required/i.test(convexErrorMessage(error))) {
       return { ok: false, error: { kind: "auth", message: "Convex rejected the session token" } };
     }
-    if (error instanceof ConvexError) {
-      return { ok: false, error: { kind: "operation", message: convexMessage(error) } };
+    if (isConvexError(error)) {
+      return { ok: false, error: { kind: "operation", message: convexErrorMessage(error) } };
     }
-    return { ok: false, error: { kind: "transport", message: convexMessage(error) } };
+    return { ok: false, error: { kind: "transport", message: convexErrorMessage(error) } };
   }
 
   if (!isRunShape(raw)) {
