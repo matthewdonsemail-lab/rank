@@ -1,0 +1,823 @@
+openapi: 3.1.0
+info:
+  title: Rank by ListeningKit API
+  version: 1.0.0
+  description: AI-assisted link-building and backlink prospect ranking engine for Muse integration
+  contact:
+    name: ListeningKit
+    url: https://listeningkit.com
+    email: api-support@listeningkit.com
+  license:
+    name: MIT
+    url: https://github.com/listeningkit/rank/blob/main/LICENSE
+
+servers:
+  - url: https://api.rank.listeningkit.com/v1
+    description: Production API
+  - url: https://dev-api.rank.listeningkit.com/v1
+    description: Development API
+  - url: http://localhost:3000/v1
+    description: Local development
+
+security:
+  - ClerkAuth: []
+  - ApiKeyAuth: []
+
+tags:
+  - name: Brand Analysis
+    description: Brand website analysis and configuration
+  - name: Prospect Discovery
+    description: Competitor domain discovery and prospect listing
+  - name: Prospect Evaluation
+    description: AI-powered prospect ranking and judgment
+  - name: Outbound Workflow
+    description: Contact resolution and outreach management
+
+paths:
+  /brand/analyze:
+    post:
+      tags:
+        - Brand Analysis
+      summary: Analyze brand website
+      description: Extract structured information from a brand website including identity, offerings, and content
+      operationId: analyzeBrand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: Brand website URL to analyze
+                  example: https://example.com
+                depth:
+                  type: integer
+                  description: Crawling depth (1-3)
+                  minimum: 1
+                  maximum: 3
+                  default: 2
+                include_content:
+                  type: boolean
+                  description: Whether to extract content from pages
+                  default: true
+      responses:
+        '200':
+          description: Brand analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandAnalysis'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /brand/{id}:
+    get:
+      tags:
+        - Brand Analysis
+      summary: Get brand analysis
+      description: Retrieve brand analysis results by ID
+      operationId: getBrand
+      parameters:
+        - $ref: '#/components/parameters/BrandId'
+      responses:
+        '200':
+          description: Brand analysis retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandAnalysis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Brand Analysis
+      summary: Update brand configuration
+      description: Update brand offerings, voice, or other configuration
+      operationId: updateBrand
+      parameters:
+        - $ref: '#/components/parameters/BrandId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                offerings:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Offering'
+                voice:
+                  type: string
+                  description: Brand voice description
+                  example: professional and authoritative
+      responses:
+        '200':
+          description: Brand updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandAnalysis'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /prospects/discover:
+    post:
+      tags:
+        - Prospect Discovery
+      summary: Discover competitor domains
+      description: Find competitor domains and shared search terms for a brand
+      operationId: discoverProspects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - brand_id
+              properties:
+                brand_id:
+                  type: string
+                  description: Brand ID to discover competitors for
+                  example: brand_abc123
+                limit:
+                  type: integer
+                  description: Maximum number of prospects to return
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+                include_shared_terms:
+                  type: boolean
+                  description: Whether to include shared search terms
+                  default: true
+      responses:
+        '200':
+          description: Prospects discovered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProspectDiscovery'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /prospects/{id}:
+    get:
+      tags:
+        - Prospect Discovery
+      summary: Get prospect details
+      description: Retrieve detailed information about a specific prospect
+      operationId: getProspect
+      parameters:
+        - $ref: '#/components/parameters/ProspectId'
+      responses:
+        '200':
+          description: Prospect retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prospect'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /prospects:
+    get:
+      tags:
+        - Prospect Discovery
+      summary: List prospects for a brand
+      description: Get paginated list of prospects for a specific brand
+      operationId: listProspects
+      parameters:
+        - name: brand_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Brand ID to list prospects for
+          example: brand_abc123
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum results per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: Prospects listed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProspectList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /prospects/{id}/evaluate:
+    post:
+      tags:
+        - Prospect Evaluation
+      summary: Evaluate prospect
+      description: Rank and judge a prospect using AI evaluation
+      operationId: evaluateProspect
+      parameters:
+        - $ref: '#/components/parameters/ProspectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read_homepage:
+                  type: boolean
+                  description: Whether to read the prospect's homepage before evaluation
+                  default: true
+                limit:
+                  type: integer
+                  description: Maximum number of prospects to evaluate in batch
+                  minimum: 1
+                  maximum: 25
+                  default: 10
+      responses:
+        '200':
+          description: Prospect evaluated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProspectJudgment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /prospects/{id}/judgment:
+    get:
+      tags:
+        - Prospect Evaluation
+      summary: Get prospect judgment
+      description: Retrieve evaluation judgment for a specific prospect
+      operationId: getProspectJudgment
+      parameters:
+        - $ref: '#/components/parameters/ProspectId'
+      responses:
+        '200':
+          description: Judgment retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProspectJudgment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /outbound/contact:
+    post:
+      tags:
+        - Outbound Workflow
+      summary: Resolve contact information
+      description: Find and validate contact information for a prospect
+      operationId: resolveContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prospect_id
+                - contact_type
+              properties:
+                prospect_id:
+                  type: string
+                  description: Prospect ID to resolve contact for
+                  example: prospect_xyz789
+                contact_type:
+                  type: string
+                  enum: [email, phone, social]
+                  description: Type of contact to resolve
+      responses:
+        '200':
+          description: Contact resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResolution'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /outbound/send:
+    post:
+      tags:
+        - Outbound Workflow
+      summary: Send outreach email
+      description: Send outreach email to a prospect
+      operationId: sendOutreach
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prospect_id
+                - contact_id
+                - subject
+                - content
+              properties:
+                prospect_id:
+                  type: string
+                  description: Prospect ID to send outreach to
+                  example: prospect_xyz789
+                contact_id:
+                  type: string
+                  description: Contact ID to use for outreach
+                  example: contact_abc123
+                subject:
+                  type: string
+                  description: Email subject line
+                  example: Guest Post Proposal
+                content:
+                  type: string
+                  description: Email body content
+                template:
+                  type: string
+                  description: Template to use for email
+                  example: guest-post-pitch
+      responses:
+        '200':
+          description: Outreach sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outbound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /outbound/{id}:
+    get:
+      tags:
+        - Outbound Workflow
+      summary: Get outbound status
+      description: Retrieve status and details of an outreach campaign
+      operationId: getOutbound
+      parameters:
+        - $ref: '#/components/parameters/OutboundId'
+      responses:
+        '200':
+          description: Outbound status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outbound'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    ClerkAuth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://rank.listeningkit.com/oauth/authorize
+          tokenUrl: https://rank.listeningkit.com/oauth/token
+          scopes:
+            read: Read access to Rank data
+            write: Write access to Rank data
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication
+
+  parameters:
+    BrandId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Brand ID
+      example: brand_abc123
+    ProspectId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Prospect ID
+      example: prospect_xyz789
+    OutboundId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Outbound campaign ID
+      example: outbound_def456
+
+  schemas:
+    BrandAnalysis:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Brand analysis ID
+          example: brand_abc123
+        url:
+          type: string
+          format: uri
+          description: Brand website URL
+          example: https://example.com
+        name:
+          type: string
+          description: Brand name
+          example: Example Company
+        tagline:
+          type: string
+          description: Brand tagline
+          example: Building the future
+        offerings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offering'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+        voice:
+          type: string
+          description: Brand voice description
+          example: professional and authoritative
+        created_at:
+          type: string
+          format: date-time
+          description: Analysis creation timestamp
+          example: '2026-09-27T00:00:00Z'
+
+    Offering:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Offering name
+          example: Product A
+        description:
+          type: string
+          description: Offering description
+          example: Description of Product A
+        category:
+          type: string
+          description: Offering category
+          example: software
+
+    Source:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Source URL
+          example: https://example.com/blog/post-1
+        title:
+          type: string
+          description: Source page title
+          example: Blog Post Title
+        content:
+          type: string
+          description: Extracted content
+          example: Extracted content...
+
+    ProspectDiscovery:
+      type: object
+      properties:
+        brand_id:
+          type: string
+          description: Brand ID
+          example: brand_abc123
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prospect'
+        total_found:
+          type: integer
+          description: Total number of prospects found
+          example: 42
+        created_at:
+          type: string
+          format: date-time
+          description: Discovery timestamp
+          example: '2026-09-27T00:00:00Z'
+
+    Prospect:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Prospect ID
+          example: prospect_xyz789
+        domain:
+          type: string
+          format: hostname
+          description: Prospect domain
+          example: competitor.com
+        name:
+          type: string
+          description: Prospect name
+          example: Competitor Name
+        homepage_title:
+          type: string
+          description: Homepage title
+          example: Competitor Homepage
+        homepage_description:
+          type: string
+          description: Homepage description
+          example: Description of competitor
+        shared_terms:
+          type: array
+          items:
+            type: string
+          description: Shared search terms
+          example: ["keyword1", "keyword2"]
+        authority_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Domain authority score
+          example: 75
+        created_at:
+          type: string
+          format: date-time
+          description: Prospect creation timestamp
+          example: '2026-09-27T00:00:00Z'
+
+    ProspectList:
+      type: object
+      properties:
+        prospects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prospect'
+        total:
+          type: integer
+          description: Total number of prospects
+          example: 42
+        limit:
+          type: integer
+          description: Results per page
+          example: 50
+        offset:
+          type: integer
+          description: Pagination offset
+          example: 0
+
+    ProspectJudgment:
+      type: object
+      properties:
+        prospect_id:
+          type: string
+          description: Prospect ID
+          example: prospect_xyz789
+        judgment:
+          type: string
+          enum: [act, review, drop]
+          description: Evaluation judgment
+          example: act
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence score
+          example: 0.85
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Reasons for judgment
+          example: ["High domain authority", "Relevant content overlap"]
+        rerank_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Nebius rerank score
+          example: 0.92
+        metrics:
+          type: object
+          properties:
+            rerank_status:
+              type: string
+              description: Rerank operation status
+              example: completed
+            homepage_read:
+              type: boolean
+              description: Whether homepage was read
+              example: true
+        created_at:
+          type: string
+          format: date-time
+          description: Judgment timestamp
+          example: '2026-09-27T00:00:00Z'
+
+    ContactResolution:
+      type: object
+      properties:
+        prospect_id:
+          type: string
+          description: Prospect ID
+          example: prospect_xyz789
+        contact:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+              description: Contact email
+              example: contact@competitor.com
+            name:
+              type: string
+              description: Contact name
+              example: Contact Name
+            role:
+              type: string
+              description: Contact role
+              example: Editor
+            deliverable:
+              type: boolean
+              description: Whether contact is deliverable
+              example: true
+        created_at:
+          type: string
+          format: date-time
+          description: Contact resolution timestamp
+          example: '2026-09-27T00:00:00Z'
+
+    Outbound:
+      type: object
+      properties:
+        outbound_id:
+          type: string
+          description: Outbound campaign ID
+          example: outbound_def456
+        prospect_id:
+          type: string
+          description: Prospect ID
+          example: prospect_xyz789
+        status:
+          type: string
+          enum: [draft, sent, replied, deal, failed]
+          description: Outreach status
+          example: sent
+        sent_at:
+          type: string
+          format: date-time
+          description: Email sent timestamp
+          example: '2026-09-27T00:00:00Z'
+        replied_at:
+          type: string
+          format: date-time
+          description: Reply received timestamp
+          example: '2026-09-27T12:00:00Z'
+        reply_sentiment:
+          type: string
+          enum: [positive, neutral, negative]
+          description: Reply sentiment analysis
+          example: positive
+        deal_likelihood:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Likelihood of converting to deal
+          example: 0.75
+        message_id:
+          type: string
+          description: Email message ID
+          example: msg_789xyz
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: INVALID_URL
+            message:
+              type: string
+              description: Error message
+              example: The provided URL is not accessible
+            details:
+              type: object
+              description: Additional error details
+            suggestion:
+              type: string
+              description: Suggested resolution
+              example: Please verify the URL is publicly accessible
+        meta:
+          type: object
+          properties:
+            request_id:
+              type: string
+              description: Request ID for tracing
+              example: req_abc123
+            timestamp:
+              type: string
+              format: date-time
+              description: Error timestamp
+              example: '2026-09-27T00:00:00Z'
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INVALID_REQUEST
+              message: Request parameters are invalid
+              details:
+                url: https://invalid-url.com
+                reason: Invalid URL format
+            meta:
+              request_id: req_abc123
+              timestamp: '2026-09-27T00:00:00Z'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Resource not found
+              details:
+                resource: brand_abc123
+              suggestion: Verify the resource ID is correct
+            meta:
+              request_id: req_abc123
+              timestamp: '2026-09-27T00:00:00Z'
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded
+              details:
+                limit: 100
+                window: 900
+              suggestion: Please wait before making more requests
+            meta:
+              request_id: req_abc123
+              timestamp: '2026-09-27T00:00:00Z'
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Request limit
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Reset time (Unix timestamp)

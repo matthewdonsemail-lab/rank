@@ -83,7 +83,10 @@ export function CliLoginPage() {
   );
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || startedRef.current) return;
+    if (!isLoaded || !isSignedIn || startedRef.current) {
+      return;
+    }
+    
     if (!exchangeConfigured) {
       setResult({
         kind: "error",
@@ -91,12 +94,16 @@ export function CliLoginPage() {
       });
       return;
     }
+    
     startedRef.current = true;
-    void getToken().then((token) => {
-      if (token) void attemptExchange(token);
-      else setResult({ kind: "error", detail: "Clerk reported a session but returned no token. Try signing out and back in." });
+    getToken().then((token) => {
+      if (token) {
+        void attemptExchange(token);
+      } else {
+        setResult({ kind: "error", detail: "Clerk reported a session but returned no token. Try signing out and back in." });
+      }
     });
-  }, [isLoaded, isSignedIn, getToken, attemptExchange, exchangeConfigured]);
+  }, [isLoaded, isSignedIn, exchangeConfigured, attemptExchange]);
 
   if (!isLoaded) return <CliLoginLoading />;
 
@@ -150,10 +157,8 @@ export function CliLoginPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    void getToken().then((token) => {
-                      if (token) void attemptExchange(token);
-                      else setResult({ kind: "error", detail: "No session token available to retry with." });
-                    });
+                    startedRef.current = false;
+                    setResult({ kind: "idle" });
                   }}
                   className="mt-4 h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
