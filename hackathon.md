@@ -15,6 +15,12 @@
 
 ## Log
 
+### 2026-09-27 - Renamed the CLI exchange route /cli-login to /cli — matthewdonsemail-lab
+- Beads: rank-mf7s
+- Commit: c54238e841794e76c99d9071a8779dc098bddb9e (2026-09-27 01:16:32 +0700)
+- Files: apps/web/src/App.tsx, apps/web/src/pages/auth.tsx, apps/web/src/pages/cli-login.tsx → apps/web/src/pages/cli.tsx, config/capabilities.json, packages/rank-cli/src/cli/commands/login.test.ts, packages/rank-cli/src/cli/commands/login.ts
+- Made `/cli` the canonical web route for the browser half of `rank login`. The CLI's `buildAuthorizeUrl` now prints `<webUrl>/cli?...`, and `/cli-login` remains a thin alias serving the same exchange page so previously printed CLI URLs keep working. The capabilities manifest (`config/capabilities.json`), the web route table, header comments, and the CLI login tests (30 pass) follow. Web typecheck is clean.
+
 ### 2026-09-27 - Usecase showcase, two-column auth screens, and the Rank-owned /oauth callback route — matthewdonsemail-lab
 - Beads: rank-s0o4
 - Commit: 0f28e52f8b269d996b3d01a73e0a0b04c567eeef (2026-09-27 01:07:48 +0700)
