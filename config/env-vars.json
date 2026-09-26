@@ -1,0 +1,185 @@
+{
+  "description": "Every environment variable Rank reads, where it is consumed, and what breaks without it. Cross-checked against convex/convex.config.ts and the code by `pnpm check:env`.",
+  "vars": [
+    {
+      "name": "CLERK_JWT_ISSUER",
+      "secret": false,
+      "required": true,
+      "scope": "auth",
+      "stage": "authenticated access",
+      "consumedBy": ["convex/auth.config.ts"],
+      "fallback": null,
+      "purpose": "Clerk issuer URL. Validated by Convex separately from the app env table; without it there are no authenticated callers."
+    },
+    {
+      "name": "CLERK_JWT_AUDIENCE",
+      "secret": false,
+      "required": true,
+      "scope": "auth",
+      "stage": "authenticated access",
+      "consumedBy": ["convex/auth.config.ts"],
+      "fallback": null,
+      "purpose": "Must match the Clerk JWT template's audience. The template is named `convex`."
+    },
+    {
+      "name": "FIRECRAWL_API_KEY",
+      "secret": true,
+      "required": true,
+      "scope": "app",
+      "stage": "brand grounding",
+      "consumedBy": ["@firecrawl/firecrawl-convex"],
+      "forwardedTo": "firecrawl",
+      "fallback": null,
+      "purpose": "Required by convex.config.ts, so codegen and deploy fail without it. Reads brand and candidate pages."
+    },
+    {
+      "name": "FIRECRAWL_API_URL",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "brand grounding",
+      "consumedBy": ["@firecrawl/firecrawl-convex"],
+      "forwardedTo": "firecrawl",
+      "fallback": "component default",
+      "purpose": "Override the Firecrawl base URL."
+    },
+    {
+      "name": "FIRECRAWL_WEBHOOK_SECRET",
+      "secret": true,
+      "required": false,
+      "scope": "app",
+      "stage": "brand grounding",
+      "consumedBy": ["@firecrawl/firecrawl-convex"],
+      "forwardedTo": "firecrawl",
+      "fallback": null,
+      "purpose": "Verifies crawl completion callbacks. New crawls default to webhook mode (convex/firecrawl.ts), so unset means unverified callbacks. Use poll mode or set it."
+    },
+    {
+      "name": "NEBIUS_API_KEY",
+      "secret": true,
+      "required": false,
+      "scope": "app",
+      "stage": "rerank",
+      "consumedBy": [
+        "lib/nebius/rerank/client.ts",
+        "convex/prospectEvaluation.ts"
+      ],
+      "fallback": null,
+      "purpose": "Absent, the rerank records status `skipped` with the reason 'NEBIUS_API_KEY is not set' and candidates keep discovery order. This is the last credential the ranking slice needs."
+    },
+    {
+      "name": "NEBIUS_BASE_URL",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "rerank",
+      "consumedBy": ["lib/nebius/rerank/client.ts"],
+      "fallback": "https://api.tokenfactory.nebius.com/v1",
+      "purpose": "Token Factory base URL."
+    },
+    {
+      "name": "DEFAULT_RANK_MODEL",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "rerank",
+      "consumedBy": ["lib/nebius/rerank/client.ts"],
+      "fallback": "built-in rerank model",
+      "purpose": "Cross-encoder model id used when a call does not name one."
+    },
+    {
+      "name": "TYPESAFE_API_KEY",
+      "secret": true,
+      "required": false,
+      "scope": "app",
+      "stage": "judgment",
+      "consumedBy": ["lib/typesafe/evaluator/evaluator.ts"],
+      "fallback": null,
+      "purpose": "Absent, the evaluator constructor throws 'TYPESAFE_API_KEY is required' and the judgment stage fails closed. No candidate is auto-judged without it."
+    },
+    {
+      "name": "TYPESAFE_BASE_URL",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "judgment",
+      "consumedBy": ["lib/typesafe/evaluator/evaluator.ts"],
+      "fallback": "https://api.typesafe.ai",
+      "purpose": "System One base URL."
+    },
+    {
+      "name": "TYPESAFE_DEFAULT_MODEL",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "judgment",
+      "consumedBy": ["lib/typesafe/evaluator/evaluator.ts"],
+      "fallback": "jev-latest",
+      "purpose": "System One model id. The code default is already jev-latest, so setting it is explicit rather than required."
+    },
+    {
+      "name": "TELNYX_API_KEY",
+      "secret": true,
+      "required": false,
+      "scope": "app",
+      "stage": "sms (separate channel)",
+      "consumedBy": ["@listeningkit/telnyx"],
+      "forwardedTo": "telnyx",
+      "fallback": null,
+      "purpose": "Telnyx v2 API key. Not part of the ranking slice."
+    },
+    {
+      "name": "TELNYX_PUBLIC_KEY",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "sms (separate channel)",
+      "consumedBy": ["@listeningkit/telnyx"],
+      "forwardedTo": "telnyx",
+      "fallback": null,
+      "purpose": "Base64 Ed25519 public key. Without it /telnyx/webhook fails closed and returns 401."
+    },
+    {
+      "name": "TELNYX_FROM_NUMBER",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "sms (separate channel)",
+      "consumedBy": ["@listeningkit/telnyx"],
+      "forwardedTo": "telnyx",
+      "fallback": null,
+      "purpose": "Default E.164 sender. A send without an explicit `from` fails with 'TELNYX_FROM_NUMBER is not configured'."
+    },
+    {
+      "name": "TELNYX_API_BASE_URL",
+      "secret": false,
+      "required": false,
+      "scope": "app",
+      "stage": "sms (separate channel)",
+      "consumedBy": ["@listeningkit/telnyx"],
+      "forwardedTo": "telnyx",
+      "fallback": "https://api.telnyx.com/v2",
+      "purpose": "Override the Telnyx API base URL."
+    },
+    {
+      "name": "CONVEX_URL",
+      "secret": false,
+      "required": false,
+      "scope": "local",
+      "stage": "local tooling",
+      "consumedBy": ["lib/telemetry/logger.ts"],
+      "fallback": "https://rank.listeningkit.convex.cloud",
+      "purpose": "Deployment URL for local scripts and telemetry. Not read by Convex functions."
+    },
+    {
+      "name": "PORT",
+      "secret": false,
+      "required": false,
+      "scope": "local",
+      "stage": "local tooling",
+      "consumedBy": ["mock/server.ts"],
+      "fallback": "mock server default",
+      "purpose": "Mock server port. Not read by Convex functions."
+    }
+  ]
+}

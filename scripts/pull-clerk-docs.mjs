@@ -22,6 +22,11 @@ const CORE_DOC_PAGES = [
   { url: `${CLERK_BASE}/organizations/overview.md`, path: 'organizations/overview.md' },
   { url: `${CLERK_BASE}/webhooks/overview.md`, path: 'webhooks/overview.md' },
   { url: `${CLERK_BASE}/webhooks/sync-data.md`, path: 'webhooks/sync-data.md' },
+  { url: `${CLERK_BASE}/guides/development/custom-flows/authentication/oauth-connections.md`, path: 'guides/development/custom-flows/authentication/oauth-connections.md' },
+  { url: `${CLERK_BASE}/guides/development/customize-redirect-urls.md`, path: 'guides/development/customize-redirect-urls.md' },
+  { url: `${CLERK_BASE}/guides/configure/auth-strategies/social-connections/overview.md`, path: 'guides/configure/auth-strategies/social-connections/overview.md' },
+  { url: `${CLERK_BASE}/nextjs/reference/components/control/authenticate-with-redirect-callback.md`, path: 'reference/components/authenticate-with-redirect-callback.md' },
+  { url: `${CLERK_BASE}/nextjs/reference/types/handle-o-auth-callback-params.md`, path: 'reference/types/handle-o-auth-callback-params.md' },
 ];
 
 async function fetchWithRetry(url, retries = 3, delay = 500) {
@@ -92,6 +97,14 @@ Local offline mirror of Clerk authentication and identity platform documentation
 - [ClerkProvider](./reference/nextjs/clerk-provider.md): Root context provider for session state.
 - [auth() Helper](./reference/nextjs/auth.md): Server-side authentication inspection.
 - [currentUser() Helper](./reference/nextjs/current-user.md): Server-side user object retrieval.
+
+## OAuth & Redirects
+
+- [Custom OAuth Flow](./guides/development/custom-flows/authentication/oauth-connections.md): Start SSO, handle callbacks, and finalize sign-in/sign-up.
+- [Customize Redirect URLs](./guides/development/customize-redirect-urls.md): Vite redirect variables and callback-safe return URLs.
+- [Social Connections Overview](./guides/configure/auth-strategies/social-connections/overview.md): Enable provider connections in Clerk.
+- [Authenticate With Redirect Callback](./reference/components/authenticate-with-redirect-callback.md): Callback component reference for custom flows.
+- [Handle OAuth Callback Params](./reference/types/handle-o-auth-callback-params.md): Callback routing and transfer parameters.
 
 ## Organizations & Webhooks
 

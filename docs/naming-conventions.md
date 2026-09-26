@@ -38,6 +38,36 @@ lib/{library}/{domainname}/
 
 `lib/brand` is the existing standalone-domain exception and has its own `index.ts` and helper barrel.
 
+## Application Packages
+
+Runnable tools live under `packages/{package}/src/` and follow the same domain shape, so a package is never a flat pile of scripts:
+
+```text
+packages/{package}/
+├── bin/{entrypoint}    # thin wrapper: argv in, exit code out
+├── src/{domain}/
+│   ├── helpers/
+│   │   ├── <pure-helper>.ts
+│   │   └── index.ts
+│   ├── types.ts
+│   ├── <domain>.ts
+│   └── index.ts
+└── README.md
+```
+
+The same rules apply: helpers are pure, every `helpers/` directory has a barrel, helpers never import the parent barrel, and a domain root exposes named exports. `scripts/check-naming-conventions.mjs` enforces this for `lib/` and every `packages/*/src` root.
+
+Shared domains belong in `packages/rank-core` so two tools cannot disagree. A package that needs the same behaviour as another imports the domain rather than copying it.
+
+Environment variables and capabilities each have exactly one source of truth:
+
+| File | Describes | Enforced by |
+|---|---|---|
+| `config/env-vars.json` | Every variable Rank reads, who consumes it, and what breaks without it | `pnpm check:surfaces` |
+| `config/capabilities.json` | Every capability and the CLI, HTTP, and tool surfaces exposing it | `pnpm check:surfaces` |
+
+The CLI, the protocol server package, and the Convex HTTP routes all derive from those files. `check-surfaces.mjs` fails when a capability is missing a surface, when two capabilities share a CLI command, tool name, or route and method, when an advertised tool or command has no implementation, or when a `requiresEnv` name is not in the environment manifest.
+
 ## Current Domain Registry
 
 | Library | Domain | Responsibility | Primary exports |
@@ -53,6 +83,18 @@ lib/{library}/{domainname}/
 | `xstate` | `enrichment` | Brand enrichment machine | `brandEnrichmentMachine` |
 | `xstate` | `competitor-discovery` | Competitor discovery machine | `competitorDiscoveryMachine` |
 | `xstate` | `prospect-evaluation` | TypeSafe prospect decision machine | `prospectEvaluationMachine` |
+
+### Package Domain Registry
+
+| Package | Domain | Responsibility | Primary exports |
+|---|---|---|---|
+| `rank-core` | `env` | Resolve the environment manifest against process, file, and deployment | `resolveEnv`, `buildReport`, `renderReport` |
+| `rank-core` | `workspace` | Filesystem access and typed views of the manifest and registry | `loadWorkspace`, `resolveRepoRoot` |
+| `rank-core` | `convex` | Convex CLI boundary for deployment variables | `readDeploymentEnv` |
+| `rank-core` | `capabilities` | Capability registry and consistency checks | `toolDefinitions`, `findGaps`, `renderRegistry` |
+| `rank-cli` | `cli` | Command registry, dispatcher, and usage text | `runCli`, `COMMANDS` |
+
+Each package documents its own domains in its README. Two tools share a surface by importing a `rank-core` domain, never by copying it.
 
 ## Machine-First Contract
 
@@ -90,5 +132,8 @@ The project uses `xstate@6.0.0-alpha.59` until a stable v6 package is published.
 ```bash
 pnpm check:machines
 pnpm check:docs
-node scripts/check-naming-conventions.mjs
+pnpm check:naming
+pnpm check:surfaces
+pnpm typecheck:packages
+pnpm test:packages
 ```

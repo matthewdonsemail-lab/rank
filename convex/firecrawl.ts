@@ -25,6 +25,10 @@ const crawlStatus = v.union(
   v.literal("failed"),
   v.literal("cancelled"),
 );
+// The Firecrawl component only invokes the completion callback once a crawl has
+// settled, so "scraping" is not a valid callback status even though the stored
+// row uses it while the crawl is still running.
+const settledCrawlStatus = v.union(v.literal("completed"), v.literal("failed"), v.literal("cancelled"));
 const crawlMode = v.union(v.literal("webhook"), v.literal("poll"));
 const crawlView = v.object({
   crawlId: v.string(),
@@ -213,7 +217,7 @@ export const updateCrawlStatus = internalMutation({
 export const onCrawlComplete = internalMutation({
   args: {
     crawlId: v.string(),
-    status: crawlStatus,
+    status: settledCrawlStatus,
     pageCount: v.number(),
     context: v.optional(v.any()),
   },

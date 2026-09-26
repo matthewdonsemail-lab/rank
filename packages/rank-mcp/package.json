@@ -1,0 +1,22 @@
+{
+  "name": "@rank/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Model Context Protocol server exposing Rank capabilities over stdio.",
+  "bin": {
+    "rank-mcp": "./bin/rank-mcp.ts"
+  },
+  "scripts": {
+    "start": "bun run bin/rank-mcp.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "typescript": "^5.9.3"
+  }
+}

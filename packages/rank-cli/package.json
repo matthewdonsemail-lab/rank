@@ -1,0 +1,20 @@
+{
+  "name": "@rank/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bun CLI for driving Rank: environment preflight, then the real Convex pipeline.",
+  "bin": {
+    "rank": "./bin/rank.ts"
+  },
+  "scripts": {
+    "start": "bun run bin/rank.ts",
+    "doctor": "bun run bin/rank.ts doctor",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "typescript": "^5.9.3"
+  }
+}

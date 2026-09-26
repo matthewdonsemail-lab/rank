@@ -59,6 +59,10 @@ const IGNORED_DIRS = new Set([
   'hono',
   'fumadocs',
   'upstream',
+  // Vendored upstream documentation mirrors, pulled by the docs:* scripts.
+  // These files are not authored here, so the brand rules do not apply to them.
+  'clerk',
+  'telnyx',
 ]);
 
 // Excludes standard copyright (U+00A9), registered (U+00AE), and trademark (U+2122) symbols

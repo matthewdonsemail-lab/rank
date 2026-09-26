@@ -1,0 +1,21 @@
+{
+  "name": "@rank/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared Rank domains: environment manifest resolution, workspace access, Convex deployment boundary, and the capability registry every surface derives from.",
+  "exports": {
+    "./env": "./src/env/index.ts",
+    "./workspace": "./src/workspace/index.ts",
+    "./convex": "./src/convex/index.ts",
+    "./capabilities": "./src/capabilities/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "typescript": "^5.9.3"
+  }
+}

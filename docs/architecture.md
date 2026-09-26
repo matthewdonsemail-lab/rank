@@ -34,7 +34,7 @@ The generated [machine pipeline diagram](diagrams/machine-pipeline.mmd) shows th
 | `lib/firecrawl/crawl` | Firecrawl operation wrapper | Called from Convex enrichment actions |
 | `lib/convex/treg` | Treg client types and spend helpers | Called from Convex competitor discovery |
 | `lib/typesafe/evaluator` | Typed System One questions, parsing, retries, and prospect judgment | Called from Convex prospect evaluation |
-| `lib/nebius/rerank` | Reranking types and score helpers | Current client is a deterministic local baseline; remote model execution is not implemented |
+| `lib/nebius/rerank` | Reranking client, types, and score helpers | `NebiusRerankClient` calls the Token Factory rerank endpoint; `convex/prospectEvaluation.ts` constructs it when `NEBIUS_API_KEY` is set. `baselineRank` is the local test-only stand-in |
 | `lib/convex/agent` | Agent-facing reasoning boundary and outbound prompt contract | Mock Agent sessions; Nebius adapter remains future work |
 | `lib/xstate/outbound` | Outbound thread state, provider contracts, reply prompt, and resolution labels | Used by Convex outbound actions and mock routes |
 | AgentMail provider boundary | Domain/inbox/thread/message transport and inbound-label bridge | Mounted component; live credentials are not configured |
@@ -52,7 +52,7 @@ Agent reasoning and email transport are deliberately separate records. `outbound
 
 ## Future Model Integration
 
-The outbound machine and prompt contract are implemented, but live model execution is not. A future Nebius token-factory adapter can replace the Agent component's `mockModel`, validate a reply analysis, and send `ANALYSIS_READY` through the existing owner-scoped action. Credentials, model clients, and live sockets remain outside machine context.
+Two model boundaries exist and they are in different states. Reranking is already remote-capable: `convex/prospectEvaluation.ts` builds a `NebiusRerankClient` when `NEBIUS_API_KEY` is set, and `rankCandidates` keeps discovery order with an explicit `skipped` or `failed` status when it cannot run, so an unranked list is never stored as ranked. Agent reasoning is still mocked: `convex/agent.ts` uses the Agent component's `mockModel`, and a future token-factory adapter can replace it, validate a reply analysis, and send `ANALYSIS_READY` through the existing owner-scoped action. Credentials, model clients, and sockets remain outside machine context.
 
 ## Source of Truth
 

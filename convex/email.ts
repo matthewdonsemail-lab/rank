@@ -6,7 +6,7 @@ import { ConvexError, v, type GenericId } from "convex/values";
 import { outboundThreadMachine, type OutboundThreadContext, type OutboundThreadState } from "../lib/xstate/outbound/index.js";
 import { requireOwner } from "./lib/server.js";
 
-const agentmail = new AgentMail(components.agentmail, {
+const agentmail: AgentMail = new AgentMail(components.agentmail, {
   onEvent: internal.email?.handleAgentMailEvent,
   onMessageReceived: internal.email?.handleIncomingEmail,
 });
@@ -373,8 +373,12 @@ export const handleIncomingEmail = internalMutation({
     const outboundLabel = labels.find((label) => label.startsWith("outbound-thread:"));
     const agentMailThreadId = thread.thread_id ?? message.thread_id;
     const messageId = message.message_id;
-    const outboundThreadId = outboundLabel?.slice("outbound-thread:".length);
-    if (outboundThreadId && /^[A-Za-z0-9]+$/.test(outboundThreadId) && agentMailThreadId && messageId) {
+    // The label is externally supplied, so validate it as a real document id
+    // instead of trusting its shape.
+    const outboundThreadId = outboundLabel
+      ? ctx.db.normalizeId("outboundThreads", outboundLabel.slice("outbound-thread:".length))
+      : null;
+    if (outboundThreadId && agentMailThreadId && messageId) {
       await ctx.runMutation(internal.outbound.recordInboundReply, {
         threadId: outboundThreadId,
         agentMailThreadId,

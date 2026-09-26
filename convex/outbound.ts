@@ -1209,7 +1209,7 @@ export const createContactResolution = action({
     publicationUrl: v.string(),
   },
   returns: contactResolutionValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<typeof contactResolutionValidator.type> => {
     const owner = await requireOwner(ctx);
     if (args.outboundThreadId) {
       const thread = await ctx.runQuery(internal.outbound.getOwnedThread, {
@@ -1235,11 +1235,14 @@ export const createContactResolution = action({
       startedAt: now,
       updatedAt: now,
     };
-    const resolutionId = await ctx.runMutation(internal.outbound.createContactResolutionRecord, {
-      owner,
-      outboundThreadId: args.outboundThreadId,
-      context,
-    });
+    const resolutionId: GenericId<"contactResolutions"> = await ctx.runMutation(
+      internal.outbound.createContactResolutionRecord,
+      {
+        owner,
+        outboundThreadId: args.outboundThreadId,
+        context,
+      },
+    );
     return {
       resolutionId,
       owner,
@@ -1313,7 +1316,7 @@ export const createOutboundThread = action({
     brand: outboundBrandValidator,
   },
   returns: outboundThreadValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<typeof outboundThreadValidator.type> => {
     const owner = await requireOwner(ctx);
     const campaign = await ctx.runQuery(internal.outbound.getOwnedCampaign, {
       campaignId: args.campaignId,
@@ -1341,7 +1344,7 @@ export const createOutboundThread = action({
       createdAt: now,
       updatedAt: now,
     };
-    const id = await ctx.runMutation(internal.outbound.createThread, {
+    const id: ThreadId = await ctx.runMutation(internal.outbound.createThread, {
       owner,
       campaignId: args.campaignId,
       context,

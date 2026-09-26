@@ -15,5 +15,11 @@ pre-push:
       run: node scripts/check-project-docs.mjs
     - name: library and domain naming conventions
       run: node scripts/check-naming-conventions.mjs
+    - name: CLI, MCP, and HTTP surfaces agree
+      run: node scripts/check-surfaces.mjs
     - name: no emojis (brand rule)
       run: node scripts/check-no-emojis.mjs
+    - name: package type checks
+      run: bun run --cwd packages/rank-core typecheck && bun run --cwd packages/rank-cli typecheck && bun run --cwd packages/rank-mcp typecheck
+    - name: package tests
+      run: bun test packages/rank-core packages/rank-cli packages/rank-mcp

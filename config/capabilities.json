@@ -1,0 +1,44 @@
+{
+  "description": "Every Rank capability and the surfaces that expose it. The CLI, the MCP server, and the Convex HTTP routes are all generated from this file, and `pnpm check:surfaces` fails when a surface drifts from it.",
+  "capabilities": [
+    {
+      "id": "env.doctor",
+      "title": "Environment preflight",
+      "summary": "Resolve every environment variable Rank reads and report what is missing per pipeline stage.",
+      "stage": "local tooling",
+      "mutating": false,
+      "requiresEnv": ["CLERK_JWT_ISSUER", "CLERK_JWT_AUDIENCE", "FIRECRAWL_API_KEY"],
+      "surfaces": {
+        "cli": { "command": "doctor" },
+        "mcp": { "tool": "rank_doctor" },
+        "http": { "route": "/rank/status", "method": "GET" }
+      }
+    },
+    {
+      "id": "env.describe",
+      "title": "Describe Rank environment",
+      "summary": "List every environment variable Rank reads, who consumes it, and what breaks without it.",
+      "stage": "local tooling",
+      "mutating": false,
+      "requiresEnv": [],
+      "surfaces": {
+        "cli": { "command": "env" },
+        "mcp": { "tool": "rank_describe_environment" },
+        "http": { "route": "/rank/environment", "method": "GET" }
+      }
+    },
+    {
+      "id": "capabilities.list",
+      "title": "List Rank capabilities",
+      "summary": "List every capability and the CLI command, MCP tool, and HTTP route that expose it.",
+      "stage": "local tooling",
+      "mutating": false,
+      "requiresEnv": [],
+      "surfaces": {
+        "cli": { "command": "capabilities" },
+        "mcp": { "tool": "rank_list_capabilities" },
+        "http": { "route": "/rank/capabilities", "method": "GET" }
+      }
+    }
+  ]
+}

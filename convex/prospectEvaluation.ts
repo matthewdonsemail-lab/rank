@@ -469,7 +469,7 @@ export const getOwnedRun = internalQuery({
       state: row.state,
       action: row.action,
       confidence: row.confidence,
-      context: row.context,
+      context: toStoredContext(row.context),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
