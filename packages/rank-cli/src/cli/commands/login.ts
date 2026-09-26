@@ -41,6 +41,7 @@ import {
 import { maskSecret } from "../../../../rank-core/src/env/index.ts";
 import { loadRankHome, normalizeDeploymentUrl, removeSession, saveSession } from "../../../../rank-core/src/rank-home/index.ts";
 import type { SessionRecord } from "../../../../rank-core/src/rank-home/index.ts";
+import { loadWorkspace } from "../../../../rank-core/src/workspace/index.ts";
 import type { Command, CommandContext } from "../types.ts";
 
 export const LOGIN_USAGE =
@@ -49,7 +50,7 @@ export const LOGOUT_USAGE = "Usage: rank logout [--deployment <url>] [--json]";
 export const WHOAMI_USAGE = "Usage: rank whoami [--deployment <url>] [--json]";
 
 const ENV_VAR_NAME = "RANK_AUTH_TOKEN";
-const DEFAULT_WEB_URL = "http://localhost:5173";
+const DEFAULT_WEB_URL = "https://rank-web-gray.vercel.app";
 const EXCHANGE_TIMEOUT_MS = 120_000;
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_TOKEN_LENGTH = 8192;
@@ -342,14 +343,16 @@ function openBrowserDefault(url: string): { ok: boolean; error?: string } {
   }
 }
 
-/** Deployment the command is acting against: flag, then `.rank` config, then env. */
+/** Deployment the command is acting against: flag, then `.rank` config, then process env, then `.env.local`. */
 function resolveDeployment(context: CommandContext, flag: string | undefined): string | undefined {
   if (flag) return normalizeDeploymentUrl(flag);
   const home = loadRankHome(context.root);
   const fromConfig = home.config?.convexUrl;
   if (fromConfig) return normalizeDeploymentUrl(fromConfig);
   const fromEnv = context.processEnv["CONVEX_URL"];
-  return fromEnv ? normalizeDeploymentUrl(fromEnv) : undefined;
+  if (fromEnv) return normalizeDeploymentUrl(fromEnv);
+  const fromFile = loadWorkspace(context.root).envFile["CONVEX_URL"];
+  return fromFile ? normalizeDeploymentUrl(fromFile) : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -386,7 +389,12 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
 
   const deployment = resolveDeployment(context, deploymentArg);
   if (!deployment) {
-    return fail(context, json, "login", "No Convex deployment URL. Pass --deployment, set CONVEX_URL, or store one with a prior login.");
+    return fail(
+      context,
+      json,
+      "login",
+      "No Convex deployment URL. Pass --deployment, set CONVEX_URL (process or .env.local), or store one with a prior login.",
+    );
   }
 
   let authToken: string;

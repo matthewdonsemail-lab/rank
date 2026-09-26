@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -30,6 +30,9 @@ const roots: string[] = [];
 function makeRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "rank-login-test-"));
   roots.push(root);
+  mkdirSync(join(root, "config"), { recursive: true });
+  writeFileSync(join(root, "config", "env-vars.json"), "{}");
+  writeFileSync(join(root, "config", "capabilities.json"), "{}");
   return root;
 }
 
@@ -215,6 +218,27 @@ describe("rank login (paste path)", () => {
     const result = await runLogin(io.context, ["--token", "tok-1234567890abcdef"]);
     expect(result.code).toBe(1);
     expect(io.joined()).toContain("No Convex deployment URL");
+  });
+
+  test(".env.local supplies the deployment when nothing else is set", async () => {
+    const root = makeRoot();
+    writeFileSync(join(root, ".env.local"), `CONVEX_URL=${DEPLOYMENT_A}\n`);
+    const io = capture(root, {});
+    okValidate();
+    const result = await runLogin(io.context, ["--token", "tok-file-0123456789abcd"]);
+    expect(result.code).toBe(0);
+    expect(readSessions(root)?.sessions[DEPLOYMENT_A]?.token).toBe("tok-file-0123456789abcd");
+  });
+
+  test("process env beats .env.local", async () => {
+    const root = makeRoot();
+    writeFileSync(join(root, ".env.local"), `CONVEX_URL=${DEPLOYMENT_B}\n`);
+    const io = capture(root, { CONVEX_URL: DEPLOYMENT_A });
+    okValidate();
+    const result = await runLogin(io.context, ["--token", "tok-proc-0123456789abcd"]);
+    expect(result.code).toBe(0);
+    expect(readSessions(root)?.sessions[DEPLOYMENT_A]?.token).toBe("tok-proc-0123456789abcd");
+    expect(readSessions(root)?.sessions[DEPLOYMENT_B]).toBeUndefined();
   });
 
   test("stores a validated token in .rank/ and never prints it in full", async () => {
