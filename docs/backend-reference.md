@@ -41,6 +41,12 @@ These functions restore `competitorDiscoveryMachine`, call the Treg client, norm
 
 The batch action maps normalized competitor candidates to link prospects and calls `TypeSafeEvaluator.judgeProspect()`. Queue queries are owner-scoped and index-backed.
 
+Local tooling reaches this workflow through exactly one door: the shared
+`prospect.evaluate` operation (`packages/rank-core/src/prospect/`), which calls
+`startProspectEvaluation` with the caller's Clerk session token. See
+[`docs/contracts/prospect-evaluate.md`](../contracts/prospect-evaluate.md) for
+the contract; the CLI and protocol-server adapters translate transport only.
+
 ### Outbound conversations
 
 - `addDomain`

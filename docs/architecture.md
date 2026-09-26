@@ -26,6 +26,21 @@ The generated [machine pipeline diagram](diagrams/machine-pipeline.mmd) shows th
 4. `contactResolutionMachine` checks domain and contact deliverability, including alternate and bounce paths.
 5. `outboundThreadMachine` manages personalized guest-post outreach, reply intent, deal likelihood, provider links, and follow-up state.
 
+## Shared Operations
+
+One workflow is exposed across local surfaces through a single shared
+operation rather than per-surface implementations:
+
+| Operation | Contract | Owner | Surfaces |
+|---|---|---|---|
+| `prospect.evaluate` | `docs/contracts/prospect-evaluate.md` | `packages/rank-core/src/prospect/` | `rank evaluate` (CLI), `rank_evaluate_prospect` (protocol server); HTTP deferred as a planned surface |
+
+The operation owns validation, auth plumbing, the Convex action call, and the
+stable result shape. Adapters translate transport only — flags and exit codes,
+tool schemas and content objects — and must not duplicate ranking logic. The
+contract is authoritative for inputs, auth, side effects, output, and failure
+behavior; capability registration and parity tests derive from it.
+
 ## Library Boundaries
 
 | Path | Responsibility | Current external behavior |
