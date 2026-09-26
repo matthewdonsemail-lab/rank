@@ -7,6 +7,8 @@ pre-push:
   jobs:
     - name: hackathon log updated within 30 min
       run: pnpm run check:hackathon-log
+    - name: hackathon log entries carry titles, beads, commits, and file lists
+      run: pnpm run check:hackathon-format
     - name: no monospace fonts (brand rule)
       run: pnpm run check:brand:no-mono
     - name: no tracking-* utilities (brand rule)
