@@ -1,4 +1,6 @@
-![Rank by ListeningKit](./banner.png)
+<p align="center">
+  <img src="banner.png" alt="Rank by ListeningKit" width="100%">
+</p>
 
 # Rank by ListeningKit
 
