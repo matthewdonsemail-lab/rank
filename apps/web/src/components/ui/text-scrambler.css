@@ -3,7 +3,6 @@
   color: #1a1a19;
   font-size: clamp(3rem, 8.5vw, 8rem);
   font-weight: 900;
-  letter-spacing: -0.075em;
   line-height: 0.9;
   text-align: center;
   text-wrap: balance;
@@ -46,9 +45,9 @@
  *
  * Drawn with -webkit-text-stroke on stacked pseudo-elements rather than with
  * text-shadow. Shadows are blurred copies painted behind the glyph, so they are
- * not antialiased against the letterform and they bleed sideways — and this
- * headline is set at a negative letter-spacing, so the gaps between letters are
- * narrower than a shadow ring and neighbouring rings collided. A stroke is
+* not antialiased against the letterform and they bleed sideways — and this
+  * headline sets the letters close together, so the gaps between letters are
+  * narrower than a shadow ring and neighbouring rings collided. A stroke is
  * rasterised as part of the glyph, which antialiases correctly and cannot travel
  * beyond the letter's own advance.
  *
