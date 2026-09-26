@@ -15,6 +15,12 @@
 
 ## Log
 
+### 2026-09-27 - Vercel production deploy of the web app and live default web origin for rank login — matthewdonsemail-lab
+- Beads: rank-sb18
+- Commit: 1e2ca2778a70c82ccf5846e694e23e169d01e0ba (2026-09-27 00:33:09 +0700)
+- Files: apps/web/vercel.json, apps/web/.gitignore, packages/rank-cli/src/cli/commands/login.ts, packages/rank-cli/src/cli/commands/login.test.ts
+- Stood up the `listeningkit/rank-web` Vercel project (Vite build from the pnpm workspace `apps/web` dir, linked to the GitHub repo) with `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_CONVEX_URL` (the blissful-meerkat-319 prod Convex deployment) in all three environments. Added `apps/web/vercel.json` SPA rewrites so deep routes (`/cli-login`, `/sign-in`, ...) resolve under any origin (rewrite config shipped in 8a8bccb). Verified the Ready production deployment serves the app publicly at `https://rank-web-gray.vercel.app` (no SSO wall) with the correct Convex deployment URL and Clerk publishable key compiled into the bundle. `rank login`'s default web origin changed from `http://localhost:5173` to `https://rank-web-gray.vercel.app` (still overridable via `--web-url`, `RANK_WEB_URL`, or `.rank/config.json`), and deployment resolution gained a `.env.local` (`CONVEX_URL`) fallback after the `.rank` config. `rank.listeningkit.com` remains parked pending DNS: the parent domain is registered on Vercel but the subdomain's CNAME at the registrar is not set, so the subdomain is still NXDOMAIN.
+
 ### 2026-09-26 - Parity tests, E2E harness, registry validation, CLI hardening — matthewdonsemail-lab
 - Beads: rank-vegn, rank-o9fu, rank-a7x5
 - Commit: 0a51199bb56e50f7aa94e1ba31830fe2344f3775 (2026-09-26 21:52:57 +0700)
