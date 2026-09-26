@@ -4,7 +4,7 @@ import { Hero } from "./landing/hero";
 import { MessagingPlatform } from "./landing/MessagingPlatform";
 import { SignInRoute, SignUpRoute } from "./pages/auth";
 import { OAuthCallbackRoute, OAuthCallbackSignUpRoute } from "./pages/oauth-callback";
-import { CliLoginPage } from "./pages/cli-login";
+import { CliLoginPage } from "./pages/cli";
 
 type AppProps = {
   authEnabled?: boolean;
@@ -62,6 +62,11 @@ export function App({ authEnabled = false, isSignedIn = false }: AppProps) {
           path="/oauth/sign-up"
           element={authEnabled ? <OAuthCallbackSignUpRoute /> : <Navigate to="/" replace />}
         />
+        <Route
+          path="/cli"
+          element={authEnabled ? <CliLoginPage /> : <Navigate to="/" replace />}
+        />
+        {/* Alias: older CLI builds print /cli-login URLs */}
         <Route
           path="/cli-login"
           element={authEnabled ? <CliLoginPage /> : <Navigate to="/" replace />}

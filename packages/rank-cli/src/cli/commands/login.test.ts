@@ -129,7 +129,7 @@ describe("validateHttpUrl", () => {
 describe("buildAuthorizeUrl", () => {
   test("carries state, challenge, and the loopback exchange URL", () => {
     const url = new URL(buildAuthorizeUrl("http://localhost:5173", "st-1", "ch-1", "http://127.0.0.1:40000/exchange"));
-    expect(url.pathname).toBe("/cli-login");
+    expect(url.pathname).toBe("/cli");
     expect(url.searchParams.get("state")).toBe("st-1");
     expect(url.searchParams.get("code_challenge")).toBe("ch-1");
     expect(url.searchParams.get("exchange")).toBe("http://127.0.0.1:40000/exchange");
@@ -316,7 +316,7 @@ describe("rank login (browser path)", () => {
 
     const promise = runLogin(io.context, ["--web-url", "http://localhost:5173"]);
     const authorize = new URL(await waitFor(() => openedUrl));
-    expect(authorize.pathname).toBe("/cli-login");
+    expect(authorize.pathname).toBe("/cli");
     const response = await fetch(authorize.searchParams.get("exchange") as string, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

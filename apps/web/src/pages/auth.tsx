@@ -4,7 +4,7 @@ import { OnboardingAuth, OnboardingAuthLoading } from "./onboarding/OnboardingAu
 
 /**
  * Post-sign-in destination. Same-origin `?redirectUrl=` wins (used by
- * /cli-login to return to its exchange URL); everything else lands on home.
+ * /cli to return to its exchange URL); everything else lands on home.
  */
 function signOutRedirectTarget(): string {
   const params = new URLSearchParams(window.location.search);

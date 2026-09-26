@@ -16,7 +16,7 @@
  * Two sign-in paths, same credential boundary:
  *
  * 1. PKCE browser flow (default): the CLI generates a code verifier and
- *    challenge, opens `<webUrl>/cli-login?state=…&code_challenge=…`, and runs
+ *    challenge, opens `<webUrl>/cli?state=…&code_challenge=…`, and runs
  *    a one-shot loopback exchange server on 127.0.0.1. The web app signs the
  *    user in via Clerk and posts back `{ code, state, code_challenge, token }`.
  *    The CLI accepts the exchange only when the state and S256 challenge
@@ -136,11 +136,11 @@ export function validateHttpUrl(value: string | undefined): string | undefined {
 }
 
 /**
- * Build the web app URL the CLI opens: /cli-login carrying this run's PKCE
+ * Build the web app URL the CLI opens: /cli carrying this run's PKCE
  * params and the loopback exchange URL the browser will POST back to.
  */
 export function buildAuthorizeUrl(webUrl: string, state: string, challenge: string, exchangeUrl: string): string {
-  const url = new URL("/cli-login", webUrl);
+  const url = new URL("/cli", webUrl);
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("exchange", exchangeUrl);

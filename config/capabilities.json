@@ -63,7 +63,7 @@
       "surfaces": {
         "cli": { "command": "login" },
         "mcp": { "planned": true, "reason": "Deferred: browser sign-in and token storage are a local operator action bound to the .rank/ home; a stdio tool can open no browser and holding secrets in MCP arguments would defeat the home. Revisit if an agent flow needs token injection without a terminal." },
-        "http": { "planned": true, "reason": "Deferred: the browser half of the exchange is a web-app route (apps/web /cli-login), not a Convex HTTP API. A public route trading Clerk session tokens would weaken the credential's locality." }
+        "http": { "planned": true, "reason": "Deferred: the browser half of the exchange is a web-app route (apps/web /cli), not a Convex HTTP API. A public route trading Clerk session tokens would weaken the credential's locality." }
       }
     },
     {

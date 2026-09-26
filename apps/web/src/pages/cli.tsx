@@ -1,5 +1,5 @@
 /**
- * /cli-login — the browser half of `rank login`.
+ * /cli — the browser half of `rank login`.
  *
  * The CLI opens this page with `?state=...&code_challenge=...&exchange=...`,
  * where exchange is the one-shot loopback URL it is listening on. When the
