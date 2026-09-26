@@ -326,8 +326,14 @@ function openBrowserDefault(url: string): { ok: boolean; error?: string } {
     let command: string;
     let args: string[];
     if (platform === "win32") {
-      command = "cmd";
-      args = ["/c", "start", "", url];
+      // NOT `cmd /c start`: cmd re-parses the joined command line and `&` is
+      // its statement separator, so the authorize URL was truncated at the
+      // first `&` and the browser opened a query carrying only `state` — the
+      // CLI then sat waiting for an exchange the page could never make.
+      // rundll32 takes the URL as a discrete argv entry, so nothing
+      // re-interprets it.
+      command = "rundll32.exe";
+      args = ["url.dll,FileProtocolHandler", url];
     } else if (platform === "darwin") {
       command = "open";
       args = [url];

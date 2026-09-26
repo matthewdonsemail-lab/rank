@@ -161,16 +161,27 @@ export function CliLoginPage() {
     [],
   );
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (!pending) return;
+  // Authentication is resolved before the exchange is even looked at, and the
+  // sign-in hand-off does not depend on the exchange params surviving: a
+  // truncated or redirected-away query used to dead-end on "no login is
+  // waiting" and never offer a way to sign in at all.
+  //
+  // The return trip carries the full authorize query rather than a bare "/cli",
+  // so the exchange survives on the URL alone as well as in the session
+  // mirror. None of these three values is a secret — the session token is what
+  // must never appear here, and it never does.
+  const returnTarget = `${window.location.pathname}${window.location.search}`;
+  const goToSignIn = useCallback(() => {
+    window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent(returnTarget)}`);
+  }, [returnTarget]);
 
-    if (!isSignedIn) {
-      // Hand off to the sign-in route. `pending` is already mirrored into
-      // sessionStorage, so returning to /cli needs no query string at all.
-      window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent("/cli")}`);
-      return;
-    }
+  useEffect(() => {
+    if (!isLoaded || isSignedIn) return;
+    goToSignIn();
+  }, [isLoaded, isSignedIn, goToSignIn]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !pending) return;
 
     setResult({ kind: "idle" });
     // getToken is deliberately not a dependency: useAuth hands back a fresh
@@ -200,8 +211,8 @@ export function CliLoginPage() {
   }, [isLoaded, isSignedIn, pending, postExchange, attempt]);
 
   const handleSignIn = useCallback(() => {
-    window.location.assign(`/sign-in?redirectUrl=${encodeURIComponent("/cli")}`);
-  }, []);
+    goToSignIn();
+  }, [goToSignIn]);
 
   if (!isLoaded) return <OnboardingAuthLoading>Loading sign-in…</OnboardingAuthLoading>;
 
@@ -214,15 +225,16 @@ export function CliLoginPage() {
       </p>
 
       <div className="mt-4">
-        {!pending ? (
-          <SplitNotice tone="info" title="No login is waiting">
-            This page has no pending <code className={splitControl.code}>rank login</code> request. Run{" "}
-            <code className={splitControl.code}>rank login</code> in your terminal and open the URL it prints.
-          </SplitNotice>
-        ) : !isSignedIn ? (
+        {!isSignedIn ? (
           <button type="button" onClick={handleSignIn} className={splitControl.primary}>
             Sign in to continue
           </button>
+        ) : !pending ? (
+          <SplitNotice tone="info" title="Nothing to authorize">
+            You are signed in, but this page has no pending{" "}
+            <code className={splitControl.code}>rank login</code> request. Run{" "}
+            <code className={splitControl.code}>rank login</code> in your terminal and open the full URL it prints.
+          </SplitNotice>
         ) : (
           <div role="status" aria-live="polite">
             {result.kind === "idle" && <SplitNotice tone="info">Preparing the local exchange…</SplitNotice>}
