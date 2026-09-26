@@ -60,3 +60,19 @@ export interface SurfaceGap {
   surface: SurfaceName;
   reason: string;
 }
+
+/**
+ * A structural schema violation in the capability registry.
+ *
+ * Same spirit as {@link SurfaceGap} (a capability id plus a human-readable
+ * reason), but not tied to one surface: duplicate ids, missing fields,
+ * dangling requiresEnv names, planned surfaces without a reason, and unknown
+ * keys are registry-shape problems rather than surface gaps. `surface` is set
+ * only when the violation belongs to one surface (a planned surface without a
+ * reason).
+ */
+export interface RegistryViolation {
+  capabilityId: string;
+  surface?: SurfaceName;
+  reason: string;
+}

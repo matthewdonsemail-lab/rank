@@ -1,4 +1,4 @@
-// Pre-push gate: surface catalog consistency.
+// Pre-push gate: surface catalog consistency plus registry schema validation.
 //
 // config/capabilities.json catalogs every Rank capability. The CLI, the MCP
 // server, and the Convex HTTP routes are implemented separately and checked
@@ -6,7 +6,12 @@
 //
 // This is a catalog check, not a parity proof. It verifies by source inspection
 // that advertised names, routes, and environment references exist — it does not
-// execute the surfaces or establish that they behave identically.
+// execute the surfaces or establish that they behave identically. Rule 8 below
+// extends the same static inspection to registry shape (unique ids, required
+// fields, requiresEnv membership, planned-surface reasons, unknown keys),
+// mirroring validateRegistry in
+// packages/rank-core/src/capabilities/helpers/validate.ts — still source
+// inspection, not runtime proof.
 //
 // A surface marked `{ "planned": true, "reason": "..." }` declares intent
 // without an implementation. Planned surfaces satisfy the must-declare rule and
@@ -22,6 +27,10 @@
 // 6. Every requiresEnv name exists in config/env-vars.json
 // 7. Every variable in config/env-vars.json is declared in convex/convex.config.ts
 //    or read by convex/auth.config.ts
+// 8. Registry schema: unique capability ids; every entry has a non-empty
+//    id/title/summary/stage and a requiresEnv array; every requiresEnv name is
+//    in config/env-vars.json; every planned surface carries a non-empty reason;
+//    no unknown top-level keys on the registry or on a capability entry
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -147,6 +156,94 @@ if (capabilities && envVars) {
         `config/env-vars.json: ${spec.name} (scope ${spec.scope}) is not declared in convex/convex.config.ts or read by convex/auth.config.ts`
       );
     }
+  }
+
+  // 8. Registry schema. Mirrors validateRegistry in
+  //    packages/rank-core/src/capabilities/helpers/validate.ts: unique ids,
+  //    required fields, requiresEnv membership, planned-surface reasons, and
+  //    unknown top-level keys. requiresEnv membership overlaps rule 6 by
+  //    design (rule 6 predates the validator); the pushIfNew guard keeps one
+  //    report per violation. Still static validation, not runtime proof.
+  const pushIfNew = (message) => {
+    if (!violations.includes(message)) violations.push(message);
+  };
+  const isNonEmptyString = (value) => typeof value === 'string' && value.trim() !== '';
+  for (const key of Object.keys(capabilities)) {
+    if (key !== 'description' && key !== 'capabilities') {
+      pushIfNew(`config/capabilities.json: unknown top-level key "${key}"`);
+    }
+  }
+  if (!Array.isArray(list)) {
+    pushIfNew('config/capabilities.json: capabilities must be an array');
+  } else {
+    const allowedCapabilityKeys = new Set([
+      'id',
+      'title',
+      'summary',
+      'stage',
+      'mutating',
+      'requiresEnv',
+      'surfaces',
+    ]);
+    const seenIds = new Map();
+    list.forEach((capability, index) => {
+      const label =
+        typeof capability === 'object' && capability !== null && isNonEmptyString(capability.id)
+          ? capability.id
+          : `#${index}`;
+      if (typeof capability !== 'object' || capability === null || Array.isArray(capability)) {
+        pushIfNew(`${label}: capability must be an object`);
+        return;
+      }
+      for (const key of Object.keys(capability)) {
+        if (!allowedCapabilityKeys.has(key)) {
+          pushIfNew(`${label}: unknown top-level key "${key}"`);
+        }
+      }
+      if (!isNonEmptyString(capability.id)) {
+        pushIfNew(`${label}: missing or empty id`);
+      } else {
+        const id = capability.id.trim();
+        if (seenIds.has(id)) {
+          pushIfNew(`${label}: duplicate capability id "${id}"`);
+        } else {
+          seenIds.set(id, label);
+        }
+      }
+      for (const field of ['title', 'summary', 'stage']) {
+        if (!isNonEmptyString(capability[field])) {
+          pushIfNew(`${label}: missing or empty ${field}`);
+        }
+      }
+      if (!Array.isArray(capability.requiresEnv)) {
+        pushIfNew(`${label}: missing or invalid requiresEnv array`);
+      } else {
+        for (const name of capability.requiresEnv) {
+          if (typeof name !== 'string' || name.trim() === '') {
+            pushIfNew(`${label}: requiresEnv entries must be non-empty strings`);
+          } else if (!envNames.has(name)) {
+            pushIfNew(`${label}: requiresEnv "${name}" is not in config/env-vars.json`);
+          }
+        }
+      }
+      const surfacesRecord =
+        typeof capability.surfaces === 'object' && capability.surfaces !== null
+          ? capability.surfaces
+          : null;
+      if (surfacesRecord) {
+        for (const surface of surfaces) {
+          const entry = surfacesRecord[surface];
+          if (
+            typeof entry === 'object' &&
+            entry !== null &&
+            entry.planned === true &&
+            !isNonEmptyString(entry.reason)
+          ) {
+            pushIfNew(`${label}: ${surface} surface is planned without a non-empty reason`);
+          }
+        }
+      }
+    });
   }
 }
 

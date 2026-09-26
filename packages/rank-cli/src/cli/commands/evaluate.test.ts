@@ -285,4 +285,53 @@ describe("evaluateCommand", () => {
     expect(calls).toBe(0);
     expect(io.err.join("\n")).toContain("--url");
   });
+
+  test("a throwing operation is caught and exits 2 as transport", async () => {
+    evaluateDeps.run = (async () => {
+      throw new Error("boom");
+    }) as typeof evaluateDeps.run;
+    const io = capture();
+    const result = await evaluateCommand.run(io.context, ["--url", "https://example.com/page"]);
+    expect(result.code).toBe(2);
+    expect(io.err.join("\n")).toContain("transport");
+    expect(io.err.join("\n")).toContain("boom");
+  });
+
+  test("--content and --metrics reach the prospect", async () => {
+    let seen: Record<string, unknown> = {};
+    evaluateDeps.run = (async (prospect: unknown) => {
+      seen = prospect as Record<string, unknown>;
+      return okRun();
+    }) as typeof evaluateDeps.run;
+    const io = capture();
+    const result = await evaluateCommand.run(io.context, [
+      "--url",
+      "https://example.com/page",
+      "--content",
+      "excerpt",
+      "--metrics",
+      JSON.stringify({ score: 3 }),
+    ]);
+    expect(result.code).toBe(0);
+    expect(seen["content"]).toBe("excerpt");
+    expect(seen["metrics"]).toEqual({ score: 3 });
+  });
+
+  test("invalid --metrics JSON exits 1 without calling the operation", async () => {
+    let calls = 0;
+    evaluateDeps.run = (async () => {
+      calls++;
+      return okRun();
+    }) as typeof evaluateDeps.run;
+    const io = capture();
+    const result = await evaluateCommand.run(io.context, [
+      "--url",
+      "https://example.com/page",
+      "--metrics",
+      "{broken",
+    ]);
+    expect(result.code).toBe(1);
+    expect(calls).toBe(0);
+    expect(io.err.join("\n")).toContain("--metrics");
+  });
 });

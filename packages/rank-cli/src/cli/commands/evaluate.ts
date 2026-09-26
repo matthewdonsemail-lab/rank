@@ -17,7 +17,8 @@ import type { Command, CommandContext } from "../types.ts";
 export const EVALUATE_USAGE =
   "Usage: rank evaluate --url <url> [--title <text>] [--description <text>] " +
   "[--source-domain <domain>] [--anchor-text <text>] [--target-domain <domain>] " +
-  "[--fit-rationale <text>] [--brand-summary <text>] [--discovery-run <id>] " +
+  "[--fit-rationale <text>] [--brand-summary <text>] [--content <text>] " +
+  "[--metrics <json>] [--discovery-run <id>] " +
   "[--deployment <url>] [--token <tok>] [--json]";
 
 interface EvaluateArgs {
@@ -29,6 +30,9 @@ interface EvaluateArgs {
   targetDomain?: string;
   fitRationale?: string;
   brandSummary?: string;
+  content?: string;
+  /** Raw --metrics JSON text; parsed at run time so parse errors stay usage errors. */
+  metricsJson?: string;
   discoveryRun?: string;
   deployment?: string;
   token?: string;
@@ -49,6 +53,8 @@ const VALUE_FLAGS: Record<string, keyof Omit<EvaluateArgs, "json">> = {
   "--target-domain": "targetDomain",
   "--fit-rationale": "fitRationale",
   "--brand-summary": "brandSummary",
+  "--content": "content",
+  "--metrics": "metricsJson",
   "--discovery-run": "discoveryRun",
   "--deployment": "deployment",
   "--token": "token",
@@ -150,7 +156,7 @@ export const evaluateDeps: { run: typeof evaluateProspect } = {
   run: evaluateProspect,
 };
 
-const PROSPECT_FIELDS: Array<[keyof Omit<EvaluateArgs, "url" | "discoveryRun" | "deployment" | "token" | "json">, string]> = [
+const PROSPECT_FIELDS: Array<[keyof Omit<EvaluateArgs, "url" | "metricsJson" | "discoveryRun" | "deployment" | "token" | "json">, string]> = [
   ["title", "title"],
   ["description", "description"],
   ["sourceDomain", "sourceDomain"],
@@ -158,6 +164,7 @@ const PROSPECT_FIELDS: Array<[keyof Omit<EvaluateArgs, "url" | "discoveryRun" | 
   ["targetDomain", "targetDomain"],
   ["fitRationale", "fitRationale"],
   ["brandSummary", "brandSummary"],
+  ["content", "content"],
 ];
 
 export async function runEvaluate(context: CommandContext, argv: string[]): Promise<{ code: number }> {
@@ -173,6 +180,14 @@ export async function runEvaluate(context: CommandContext, argv: string[]): Prom
     const value = opts[field];
     if (value !== undefined) prospect[key] = value;
   }
+  if (opts.metricsJson !== undefined) {
+    try {
+      prospect["metrics"] = JSON.parse(opts.metricsJson);
+    } catch {
+      context.err(`rank evaluate: --metrics must be valid JSON\n${EVALUATE_USAGE}`);
+      return { code: 1 };
+    }
+  }
 
   // Flags first, then the process environment. Anything still undefined falls
   // through to the operation's own CONVEX_URL / RANK_AUTH_TOKEN lookup, which
@@ -180,11 +195,27 @@ export async function runEvaluate(context: CommandContext, argv: string[]): Prom
   const deploymentUrl = opts.deployment ?? context.processEnv["CONVEX_URL"];
   const authToken = opts.token ?? context.processEnv["RANK_AUTH_TOKEN"];
 
-  const result = await evaluateDeps.run(prospect, {
-    deploymentUrl,
-    authToken,
-    ...(opts.discoveryRun !== undefined ? { sourceDiscoveryRunId: opts.discoveryRun } : {}),
-  });
+  // The operation contract says it throws nothing, but a transport seam that
+  // lets an exception escape would crash the process with a stack trace. Catch
+  // everything here and report it as a transport failure, matching the MCP
+  // adapter's boundary behavior.
+  let result: Awaited<ReturnType<typeof evaluateDeps.run>>;
+  try {
+    result = await evaluateDeps.run(prospect, {
+      deploymentUrl,
+      authToken,
+      ...(opts.discoveryRun !== undefined ? { sourceDiscoveryRunId: opts.discoveryRun } : {}),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const failure = { kind: "transport" as const, message };
+    if (opts.json) {
+      context.err(JSON.stringify({ ok: false, error: failure }, null, 2));
+    } else {
+      context.err(`rank evaluate failed (transport): ${message}`);
+    }
+    return { code: 2 };
+  }
 
   if (!result.ok) {
     if (opts.json) {

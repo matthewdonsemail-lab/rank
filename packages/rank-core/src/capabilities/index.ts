@@ -8,6 +8,7 @@ export {
   renderRegistry,
   requiredEnv,
 } from "./capabilities.ts";
+export { validateRegistry, type EnvManifestLike } from "./helpers/index.ts";
 export type {
   Capability,
   CapabilityRegistry,
@@ -16,6 +17,7 @@ export type {
   HttpMethod,
   HttpSurface,
   McpSurface,
+  RegistryViolation,
   SurfaceGap,
   SurfaceName,
 } from "./types.ts";
