@@ -14,12 +14,19 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@listeningkit/ui": ["./src/ui.tsx"]
+      "@listeningkit/ui": ["./src/ui.tsx"],
+      "@rank/connectors": ["../../packages/rank-core/src/connectors/index.ts"]
     }
   },
-  "include": ["src"],
+  "include": [
+    "src",
+    "../../packages/rank-core/src/connectors/index.ts",
+    "../../packages/rank-core/src/connectors/types.ts",
+    "../../packages/rank-core/src/connectors/connectors.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

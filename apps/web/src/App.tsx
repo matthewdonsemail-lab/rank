@@ -5,6 +5,7 @@ import { MessagingPlatform } from "./landing/MessagingPlatform";
 import { SignInRoute, SignUpRoute } from "./pages/auth";
 import { OAuthCallbackRoute, OAuthCallbackSignUpRoute } from "./pages/oauth-callback";
 import { CliLoginPage } from "./pages/cli";
+import { ConnectorsPage } from "./pages/connectors";
 
 type AppProps = {
   authEnabled?: boolean;
@@ -27,7 +28,7 @@ function Landing({ authEnabled, isSignedIn }: Required<Pick<AppProps, "authEnabl
         tone="light"
         homeHref="/"
         logoLabel="ListeningKit"
-        navItems={[]}
+        navItems={[{ href: "/connectors", label: "Connectors" }]}
         isLoggedIn={isSignedIn}
         accountItems={accountItems}
       />
@@ -71,6 +72,8 @@ export function App({ authEnabled = false, isSignedIn = false }: AppProps) {
           path="/cli-login"
           element={authEnabled ? <CliLoginPage /> : <Navigate to="/" replace />}
         />
+        {/* Documentation surface: the same connector registry the CLI and MCP serve. */}
+        <Route path="/connectors" element={<ConnectorsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -9,6 +9,7 @@
  * and can be called directly in tests.
  */
 import { renderRegistry } from "../../../rank-core/src/capabilities/index.ts";
+import { CONNECTOR_REGISTRY, renderConnectors } from "../../../rank-core/src/connectors/index.ts";
 import { buildReport, renderManifest, renderReport, resolveEnv } from "../../../rank-core/src/env/index.ts";
 import { loadRankHome, rankHomeEnvSources, effectiveProcessEnv } from "../../../rank-core/src/rank-home/index.ts";
 import { asManifest, asRegistry, loadWorkspace } from "../../../rank-core/src/workspace/index.ts";
@@ -244,6 +245,18 @@ export const TOOLS: ToolImplementation[] = [
       inputSchema: NO_ARGUMENTS,
     },
     run: (_args, context) => listCapabilities(context.root),
+  },
+  {
+    definition: {
+      name: "rank_list_connectors",
+      description: "List agent connectors (Hermes, Claude, Codex, Muse) and how each reaches Rank.",
+      capabilityId: "connectors.list",
+      inputSchema: NO_ARGUMENTS,
+    },
+    run: () => ({
+      text: renderConnectors(),
+      structured: { connectors: CONNECTOR_REGISTRY.connectors },
+    }),
   },
   createEvaluateProspectTool(),
 ];

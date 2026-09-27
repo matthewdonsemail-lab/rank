@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+// Client and InMemoryTransport come from the same package: the two halves of a
+// linked pair must share an import source, or instanceof checks fail across
+// the boundary.
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "./server.ts";
 import { resolveRepoRoot } from "../../../rank-core/src/workspace/index.ts";
 

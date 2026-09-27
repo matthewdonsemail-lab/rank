@@ -74,4 +74,22 @@ describe("tools", () => {
     const names = TOOLS.map((tool) => tool.definition.name);
     expect(new Set(names).size).toBe(names.length);
   });
+
+  test("rank_list_connectors returns the shared registry as text and fields", async () => {
+    const tool = toolByName("rank_list_connectors");
+    expect(tool).toBeDefined();
+    const result = await tool!.run({}, { root: "test-root", processEnv: {} });
+    expect(typeof result === "string" ? null : result.structured).toMatchObject({
+      connectors: expect.arrayContaining([
+        expect.objectContaining({ id: "claude" }),
+        expect.objectContaining({ id: "codex" }),
+        expect.objectContaining({ id: "hermes" }),
+        expect.objectContaining({ id: "muse" }),
+      ]),
+    });
+    const text = typeof result === "string" ? result : result.text;
+    for (const id of ["hermes", "claude", "codex", "muse"]) {
+      expect(text).toContain(id);
+    }
+  });
 });

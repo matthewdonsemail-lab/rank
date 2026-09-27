@@ -91,6 +91,19 @@
         "mcp": { "planned": true, "reason": "Deferred: diagnostics belong to rank_doctor, which already resolves .rank/ as an env source. Revisit if per-session status is needed without the full preflight." },
         "http": { "planned": true, "reason": "Deferred: session status is local state; rank/status already covers deployment visibility." }
       }
+    },
+    {
+      "id": "connectors.list",
+      "title": "List agent connectors",
+      "summary": "List every agent connector (Hermes, Claude, Codex, Muse) and how each reaches Rank: CLI, MCP over stdio, or the planned HTTP API. Rendered from the shared connectors registry in rank-core, so the CLI, MCP, and web surfaces cannot describe different connectors.",
+      "stage": "local tooling",
+      "mutating": false,
+      "requiresEnv": [],
+      "surfaces": {
+        "cli": { "command": "connectors" },
+        "mcp": { "tool": "rank_list_connectors" },
+        "http": { "planned": true, "reason": "Connector discovery is local documentation; the three read-only metadata routes already describe the service. Revisit if a remote client needs it." }
+      }
     }
   ]
 }

@@ -4,9 +4,8 @@
  * Tool names come from the shared capability registry, and every advertised tool
  * is also implemented here, so an unimplemented tool is impossible to expose.
  */
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Server } from "@modelcontextprotocol/server";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { loadWorkspace, asRegistry, resolveRepoRoot } from "../../../rank-core/src/workspace/index.ts";
 import { toolDefinitions } from "./helpers/tool-definitions.ts";
 import { TOOLS, toolByName } from "./tools.ts";
@@ -27,7 +26,7 @@ export function createServer(context: ToolImplementationContext): Server {
     { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  server.setRequestHandler("tools/list", async () => ({
     tools: advertised.map((definition) => ({
       name: definition.name,
       description: definition.description,
@@ -35,7 +34,7 @@ export function createServer(context: ToolImplementationContext): Server {
     })),
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler("tools/call", async (request) => {
     const name = request.params.name;
     const tool = toolByName(name);
     if (!tool) {

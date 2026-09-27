@@ -2,12 +2,19 @@
 
 import type { Capability, CapabilityRegistry } from "../../../rank-core/src/capabilities/index.ts";
 
-/** One JSON Schema property in a tool input schema. */
-export interface RankToolPropertySchema {
+/**
+ * One JSON Schema property in a tool input schema.
+ *
+ * Declared as a `type` alias rather than an `interface` on purpose: the MCP
+ * SDK v2 wire types constrain `properties` with an index signature, and only
+ * object-literal types (not interfaces) receive an implicit index signature.
+ * An interface with this exact shape fails assignability to the spec `Tool`.
+ */
+export type RankToolPropertySchema = {
   /** JSON Schema type name(s). Omitted when any JSON value is accepted. */
   type?: string | string[];
   description: string;
-}
+};
 
 /** A tool as advertised to an MCP client. */
 export interface RankToolDefinition {

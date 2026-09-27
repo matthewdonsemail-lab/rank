@@ -15,6 +15,13 @@
 
 ## Log
 
+### 2026-09-27 - Agent connectors domain with Hermes, Claude, Codex, Muse parity — matthewdonsemail-lab
+- Beads: n/a
+- Commit: uncommitted
+- Files: packages/rank-core/src/connectors/, config/capabilities.json, scripts/check-surfaces.mjs, packages/rank-cli/src/cli/commands/connectors.ts, packages/rank-cli/src/cli/commands/connectors.test.ts, packages/rank-cli/src/cli/cli.ts, packages/rank-mcp/src/mcp/tools.ts, packages/rank-mcp/src/mcp/types.ts, packages/rank-mcp/src/mcp/server.ts, packages/rank-mcp/src/mcp/server.test.ts, packages/rank-mcp/src/mcp/tools.test.ts, packages/rank-mcp/src/mcp/evaluate-parity.test.ts, packages/rank-mcp/package.json, packages/rank-mcp/bun.lock, packages/rank-cli/src/cli/commands/evaluate-parity.test.ts, docs/agents/hermes/README.md, docs/agents/claude/README.md, docs/agents/codex/README.md, docs/agents/muse/README.md, apps/web/src/pages/connectors.tsx, apps/web/src/App.tsx, apps/web/vite.config.ts, apps/web/tsconfig.json
+- New `packages/rank-core/src/connectors/` domain (types, registry, validation tests): Hermes, Claude, Codex as supported stdio/MCP+CLI connectors, Muse as needs-remote-api, each with real setup, limits, doc path, and capability ids. The registry is validated against `config/capabilities.json` and the filesystem. New `connectors.list` capability; `rank connectors` CLI command (list/show/--json); `rank_list_connectors` MCP tool (text plus structuredContent); `/connectors` web page rendering the same registry via a new `@rank/connectors` alias. Live-verified CLI and MCP return the same data. Rewrote the Muse guide to the truth (no REST/OAuth server); new Hermes/Claude/Codex guides carry exact researched configs.
+- MCP SDK v1 (`@modelcontextprotocol/sdk` 1.30.1) migrated to v2 packages (`@modelcontextprotocol/server` + `/client` 2.1.0): method-string handlers, same-package InMemoryTransport in tests, and `RankToolPropertySchema` changed from interface to type alias (v2 wire types need the implicit index signature). Stays on the 2025-era handshake all current hosts speak; the 2026-07-28 revision is explicitly not adopted. Proven with a live stdio smoke test (initialize, tools/list, tools/call) plus the full suite.
+
 ### 2026-09-27 - Post-sign-in returns to the sending page so rank login completes — matthewdonsemail-lab
 - Beads: n/a
 - Commit: 05710aca7e2ed3a68de9e89172e74e543dcfd148 (2026-09-27 09:46:53 +0700)

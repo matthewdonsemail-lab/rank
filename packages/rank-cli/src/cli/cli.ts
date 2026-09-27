@@ -6,6 +6,7 @@
  */
 import { resolveRepoRoot } from "../../../rank-core/src/workspace/index.ts";
 import { capabilitiesCommand } from "./commands/capabilities.ts";
+import { connectorsCommand } from "./commands/connectors.ts";
 import { doctorCommand } from "./commands/doctor.ts";
 import { envCommand } from "./commands/env.ts";
 import { evaluateCommand } from "./commands/evaluate.ts";
@@ -24,6 +25,7 @@ export const COMMANDS: Command[] = [
   doctorCommand,
   envCommand,
   capabilitiesCommand,
+  connectorsCommand,
   evaluateCommand,
 ];
 
