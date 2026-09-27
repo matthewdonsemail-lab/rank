@@ -1,0 +1,62 @@
+---
+title: Connectors
+description: Every agent connector Rank supports, how each one reaches Rank, and where the line between working today and planned is.
+---
+
+# Connectors
+
+A connector is how a specific agent talks to Rank. Each one runs the
+`rank-mcp` server over stdio, so they share one tool surface and one session.
+
+This list is generated from the same registry the CLI and MCP server read, so it
+cannot drift from `rank connectors`.
+
+## Claude Code
+
+Anthropic's terminal agent over MCP stdio. Adds Rank as an MCP server via
+`claude mcp add`, giving it the evaluate and list tools directly.
+
+[Set up Claude Code](/docs/connectors/claude)
+
+## Codex
+
+OpenAI's terminal agent over MCP stdio. Configured through the `[mcp_servers]`
+table in `config.toml`, not the `mcp.servers.*` spelling, which is silently
+ignored.
+
+[Set up Codex](/docs/connectors/codex)
+
+## Hermes Agent
+
+NousResearch's agent runtime over MCP stdio.
+
+[Set up Hermes Agent](/docs/connectors/hermes)
+
+## Muse
+
+Meta's agent. The local, checked-out path works today; remote use needs an HTTP
+endpoint that does not exist yet. Its capability flags are explicitly deferred
+in `config/capabilities.json` rather than advertised.
+
+[Set up Muse](/docs/connectors/muse)
+
+## Shared behaviour
+
+All four read the same registry, so a connector cannot claim a tool the server
+does not expose. The three shared constraints:
+
+- **One session.** Connectors reuse the session `rank login` stored. They never
+  mint identities.
+- **Real tools only.** The server exposes five: `rank_doctor`,
+  `rank_describe_environment`, `rank_list_capabilities`,
+  `rank_evaluate_prospect`, and `rank_list_connectors`.
+- **Honest status.** A connector that needs an endpoint which does not exist
+  says so and explains what is missing, rather than shipping commands that
+  cannot work.
+
+## Adding a connector
+
+Add an entry to `packages/rank-core/src/connectors/`, write its guide as MDX
+under `apps/docs/content/docs/connectors/`, and list it in that folder's
+`_meta.json`. A unit test fails the build if the registry, the nav order, the
+page titles, and the frontmatter disagree, or if a guide is missing.

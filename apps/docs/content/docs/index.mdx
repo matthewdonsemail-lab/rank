@@ -1,19 +1,61 @@
 ---
 title: Rank Docs
-description: Agent connectors and evaluation docs for Rank by ListeningKit.
+description: Rank is an AI-assisted link-building and backlink prospect ranking engine. It grounds a brand, finds publications where that brand is useful, explains editorial fit, and prepares outreach decisions.
 ---
 
-# Rank Docs
+# Rank
 
-How agents reach Rank, and how ranking works.
+Rank turns a brand's own content into grounded evidence, finds the publications
+where that content is genuinely useful, explains the editorial fit, and prepares
+personalized outreach decisions. It is built for the Nebius AI Studio Hackathon
+and runs on Convex Cloud.
 
-## Connectors
+The problem Rank solves is not "send more emails". It is deciding, for one
+publication, whether a specific piece of your content earns a link there, and
+being able to show the reasoning.
 
-- [Claude Code](/docs/connectors/claude) — Anthropic's terminal agent over MCP stdio.
-- [Codex](/docs/connectors/codex) — OpenAI's terminal agent over MCP stdio.
-- [Hermes Agent](/docs/connectors/hermes) — NousResearch's agent runtime over MCP stdio.
-- [Muse](/docs/connectors/muse) — Meta's agent; remote use needs the planned HTTP API.
+## What it does
 
-All four read the same connector registry as the CLI (`rank connectors`) and
-the MCP server (`rank_list_connectors`). Authenticate once with `rank login`;
-connectors reuse that session and never mint identities.
+1. **Grounds the brand.** Identity, offerings, and voice are extracted from the
+   brand's own site and stored as the evidence base. Nothing is invented.
+2. **Discovers prospects.** Competitor domains become a candidate pool.
+3. **Evaluates each prospect.** The candidate homepage is read, reranked against
+   the brand with Nebius AI Studio, then judged with TypeSafe AI.
+4. **Prepares outreach.** Contacts are resolved, drafts are produced for approval,
+   and replies are handled as state.
+
+Every step is inspectable. The evaluation keeps the model, the token cost, and
+the per-signal provenance rather than collapsing to a single opaque score.
+
+## Surfaces
+
+Rank is one product with four surfaces over a single source of truth. A
+capability cannot be advertised on one surface and missing on another; the
+catalog in `config/capabilities.json` is validated against all of them in
+pre-push.
+
+| Surface | Entry point | Use it for |
+| --- | --- | --- |
+| CLI | `rank` | Scripting and one-off work from a terminal |
+| MCP server | `rank-mcp` | Giving an agent tools over stdio |
+| HTTP API | Convex deployment | Programmatic access and webhooks |
+| Web app | [rank.listeningkit.com](https://rank.listeningkit.com) | The hosted product |
+
+Start with the [quickstart](/docs/getting-started/quickstart), then pick the
+surface that matches how you work. The [connectors](/docs/connectors) section
+covers wiring Rank into Claude Code, Codex, Hermes, and Muse.
+
+## How the surfaces stay honest
+
+`config/capabilities.json` is the catalog. Each entry declares the CLI command,
+the MCP tool, and the HTTP route that implement it. A pre-push gate reads the
+CLI, MCP, and Convex sources and fails the build when a surface drifts from the
+catalog, so the tables in the [reference](/docs/reference/cli) section describe
+code that actually exists.
+
+## Where to go next
+
+- [How it works](/docs/concepts/how-it-works) walks one prospect end to end.
+- [Architecture](/docs/concepts/architecture) covers the XState machines, the
+  Convex backend, and the provider boundaries.
+- [Self-hosting](/docs/self-hosting) covers running Rank yourself.

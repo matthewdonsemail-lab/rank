@@ -1,4 +1,8 @@
 {
   "index": "Overview",
-  "connectors": "Connectors"
+  "getting-started": "Getting started",
+  "concepts": "Concepts",
+  "connectors": "Connectors",
+  "reference": "Reference",
+  "self-hosting": "Self-hosting"
 }

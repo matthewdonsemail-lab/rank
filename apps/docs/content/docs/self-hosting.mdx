@@ -1,0 +1,98 @@
+---
+title: Self-hosting
+description: Run Rank yourself, point it at your own Convex deployment, and understand what the hosted version adds.
+---
+
+# Self-hosting
+
+Rank is a TypeScript workspace and runs against any Convex deployment you control.
+The hosted version at [rank.listeningkit.com](https://rank.listeningkit.com) and a
+self-hosted deployment run the same code.
+
+## Requirements
+
+- Node and a package manager. The repository is a pnpm workspace.
+- A Convex project. The CLI expects a project named `rank` in `convex.json`; change
+  the name if you prefer a different one.
+- Provider credentials for the stages you intend to run. See
+  [Environment](/docs/reference/environment).
+
+## Install and configure
+
+```bash
+pnpm install
+cp .env.example .env.local
+```
+
+Fill in `.env.local` with the variables for the stages you want. You do not need
+every provider: discovery without Firecrawl, or evaluation without Telnyx, works
+fine, and `rank doctor` will tell you precisely which stage is blocked rather
+than failing later.
+
+## Start the backend
+
+```bash
+pnpm convex:dev
+```
+
+This brings up a local Convex deployment and pushes your functions to it. Note
+the URL it prints: that is the deployment your local tooling talks to.
+
+## Run the surfaces
+
+```bash
+pnpm web:dev      # the web app
+pnpm docs:dev     # this documentation site
+pnpm docs:build   # build the docs, mounted into the web app at /docs
+```
+
+The docs site is served by the web app itself. `pnpm web:build` runs the docs
+export first and mounts it into `apps/web/public/docs`, so the two cannot drift
+apart.
+
+## Deploy
+
+Push your Convex functions to your own production deployment with
+`pnpm convex:deploy`, then build the web app with `pnpm web:build`.
+
+The web app is a static build. It needs a host that serves `dist/` and falls back
+to `index.html` for client-side routes. `apps/web/vercel.json` is the reference
+configuration: it enables clean URLs so the generated docs routes resolve, and
+rewrites everything else to the app shell.
+
+## What self-hosting does not include
+
+Some capabilities are explicitly not available outside the hosted deployment, and
+they say so rather than failing at call time:
+
+- **Muse over a remote endpoint.** Muse runs connectors in Meta's cloud, so a
+  local checkout is out of reach. Its capability is marked `needs-remote-api` in
+  the registry and its guide explains what is missing.
+- **Access codes.** The hosted `/cli` page is gated so the sign-in flow cannot be
+  driven by a bot. A self-hosted deployment has no such gate unless you add one.
+
+## Mocks
+
+External providers have mock implementations, so you can develop without
+credentials:
+
+```bash
+pnpm mock:verify
+```
+
+This verifies the mocks against their contracts rather than assuming they match.
+A standalone in-memory mock server backs the same routes, which is enough to work
+on the web app with no backend at all.
+
+## Checks
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm check:pre-push
+```
+
+`check:pre-push` is the full gate: naming conventions, machine and project
+documentation, surface catalog consistency, brand rules, and the tooling
+typecheck and tests. It is the same gate that runs before a push, so a
+self-hosted fork gets the same guarantees.

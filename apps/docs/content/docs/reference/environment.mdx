@@ -1,0 +1,87 @@
+---
+title: Environment
+description: Every environment variable Rank reads, which module consumes it, and what breaks without it.
+---
+
+# Environment
+
+Rank reads a fixed set of variables. `rank env` prints this inventory from the
+machine, `rank doctor` checks the current state, and `GET /rank/environment`
+returns it over HTTP.
+
+## Identity
+
+| Variable | Consumed by | Without it |
+| --- | --- | --- |
+| `CLERK_JWT_ISSUER` | `convex/auth.config.ts` | The deployment rejects every session token |
+| `CLERK_JWT_AUDIENCE` | `convex/auth.config.ts` | The deployment rejects every session token |
+| `RANK_AUTH_TOKEN` | `packages/rank-core/src/prospect/`, `packages/rank-mcp/src/mcp/tools.ts` | No scripted or CI session |
+
+The deployment accepts every Clerk issuer Rank actually deploys against. If a
+session is rejected, confirm it was minted from the `convex` JWT template rather
+than another one.
+
+## Ranking and judgment
+
+| Variable | Consumed by | Without it |
+| --- | --- | --- |
+| `NEBIUS_API_KEY` | `lib/nebius/rerank/client.ts`, `convex/prospectEvaluation.ts` | Reranking cannot run |
+| `NEBIUS_BASE_URL` | `lib/nebius/rerank/client.ts` | Defaults are used |
+| `DEFAULT_RANK_MODEL` | `lib/nebius/rerank/client.ts` | Falls back to `Qwen/Qwen3-Reranker-8B` |
+| `TYPESAFE_API_KEY` | `lib/typesafe/evaluator/evaluator.ts` | Prospect judgment cannot run |
+| `TYPESAFE_BASE_URL` | `lib/typesafe/evaluator/evaluator.ts` | Defaults are used |
+| `TYPESAFE_DEFAULT_MODEL` | `lib/typesafe/evaluator/evaluator.ts` | The provider default is used |
+
+`DEFAULT_RANK_MODEL` is the one to reach for when you want to pin a reranker.
+The default is the model Nebius documents for its rerank endpoint.
+
+## Scraping
+
+| Variable | Consumed by | Without it |
+| --- | --- | --- |
+| `FIRECRAWL_API_KEY` | `@firecrawl/firecrawl-convex` | Pages cannot be read |
+| `FIRECRAWL_API_URL` | `@firecrawl/firecrawl-convex` | Defaults are used |
+| `FIRECRAWL_WEBHOOK_SECRET` | `@firecrawl/firecrawl-convex` | Inbound scrape events cannot be verified |
+
+Without a key, prospect evaluation cannot read the candidate page, and the
+evaluation cannot be grounded in real content.
+
+## Messaging
+
+| Variable | Consumed by | Without it |
+| --- | --- | --- |
+| `TELNYX_API_KEY` | `@listeningkit/telnyx` | SMS cannot be sent |
+| `TELNYX_PUBLIC_KEY` | `@listeningkit/telnyx` | Inbound SMS cannot be verified |
+| `TELNYX_FROM_NUMBER` | `@listeningkit/telnyx` | No sending number |
+| `TELNYX_API_BASE_URL` | `@listeningkit/telnyx` | Defaults are used |
+
+`TELNYX_PUBLIC_KEY` matters even if you only send: without it the
+`POST /telnyx/webhook` route cannot verify a signature and rejects events.
+
+## Local
+
+| Variable | Consumed by | Without it |
+| --- | --- | --- |
+| `CONVEX_URL` | `lib/telemetry/logger.ts` | Telemetry has nowhere to report |
+| `PORT` | `mock/server.ts` | The mock server picks a default port |
+
+## Checking what is missing
+
+```bash
+rank doctor
+```
+
+`rank doctor` groups what is missing by pipeline stage, so you can tell whether
+a failure is a local tooling problem or a backend deployment problem. Its scope
+depends on the surface: the CLI reads the linked deployment unless you pass
+`--local`, the MCP tool reads local sources only, and the HTTP route reports
+deployment presence through a Convex query.
+
+## Keeping the manifest honest
+
+`config/env-vars.json` is the source for this page, and the CLI, the MCP tool,
+and the HTTP route all read it rather than hardcoding their own lists. A
+pre-push gate checks that every variable named in the capability catalog exists
+in the manifest, that every variable in the manifest is declared in
+`convex/convex.config.ts`, and that a planned surface carries a non-empty reason
+for being absent.

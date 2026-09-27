@@ -1,0 +1,64 @@
+---
+title: How it works
+description: A single prospect walked end to end, from grounded brand evidence to an outreach decision.
+---
+
+# How it works
+
+This follows one prospect from start to finish. Each stage is a real code
+boundary, not a conceptual box.
+
+## 1. Brand grounding
+
+Everything downstream depends on knowing what the brand actually is, so this
+comes first. The brand's own site is scraped and its identity, offerings, and
+voice are extracted into a structured entity with sources attached.
+
+The output is evidence, not prose. Each extracted claim keeps the source it came
+from, which is what lets a later stage say "this fits because your page about X
+matches their readership" instead of asserting a fit.
+
+Implemented in `lib/brand/` with the Convex backend in `convex/brand.ts`.
+
+## 2. Competitor discovery
+
+Treg is queried to find the domains that already rank for the same terms. This
+produces a candidate pool rather than a ranked list, because at this point Rank
+knows who might be relevant but not whether any individual page is a fit.
+
+Implemented in `lib/xstate/competitor-discovery/` with `convex/competitorDiscovery.ts`.
+
+## 3. Prospect evaluation
+
+This is the part that decides. For a candidate page:
+
+1. **Read.** Firecrawl fetches the page so Rank is judging real content rather
+   than a search snippet.
+2. **Rerank.** The content is scored against the grounded brand using Nebius AI
+   Studio. The default model is `Qwen/Qwen3-Reranker-8B`, overridable with
+   `DEFAULT_RANK_MODEL`.
+3. **Judge.** TypeSafe AI turns the reranked evidence into a verdict with
+   reasons.
+
+The result is inspectable. It carries the model that ran, the token cost, and
+the per-signal provenance, so a ranking can be explained instead of trusted.
+
+Implemented in `lib/nebius/rerank/` with `convex/prospectEvaluation.ts`.
+
+## 4. Outbound workflow
+
+Contacts are resolved, guest-post proposals are drafted for approval rather than
+sent automatically, and replies are handled as explicit state transitions. SMS
+delivery runs through Telnyx.
+
+Implemented in `lib/xstate/outbound/` with `convex/outbound.ts`.
+
+## Why the stages are explicit
+
+Each stage is a separate Convex function set with its own state, which means a
+failure is attributable. When a run stalls, the stage tells you which one, and
+`rank doctor` tells you which environment variable that stage was waiting on.
+Collapsing the pipeline into one function would have made both answers harder.
+
+Read [Architecture](/docs/concepts/architecture) for how those stages are
+orchrated and where the provider boundaries sit.

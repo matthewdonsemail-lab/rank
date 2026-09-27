@@ -1,0 +1,74 @@
+---
+title: MCP server
+description: The tools rank-mcp exposes over stdio, what each one returns, and how to register it with an agent.
+---
+
+# MCP server
+
+`rank-mcp` is published as `@rank/mcp` and speaks the Model Context Protocol over
+stdio. Every connector in the [connectors](/docs/connectors) section runs it, so
+this is the tool surface an agent actually gets.
+
+## Tools
+
+| Tool | Does | Capability |
+| --- | --- | --- |
+| `rank_doctor` | Report which environment variables are missing, per stage | `env.doctor` |
+| `rank_describe_environment` | List every variable Rank reads and what breaks without it | `env.describe` |
+| `rank_list_capabilities` | List every capability and its CLI, MCP, and HTTP surface | `capabilities.list` |
+| `rank_evaluate_prospect` | Evaluate one prospect and return the verdict with provenance | `prospect.evaluate` |
+| `rank_list_connectors` | List agent connectors and how each reaches Rank | `connectors.list` |
+
+Five tools, matching the five capabilities that make sense for an agent to call.
+Authentication and environment-management commands are deliberately not exposed:
+`rank login` is an interactive, operator-facing action, not something an agent
+should be able to trigger.
+
+## Registering it
+
+The server takes one command and a small set of arguments. Because it runs over
+stdio, the arguments are absolute paths.
+
+```json
+{
+  "mcpServers": {
+    "rank": {
+      "command": "rank-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}
+```
+
+Each agent has its own configuration file and its own syntax for declaring that
+block. See the guide for your agent:
+
+- [Claude Code](/docs/connectors/claude)
+- [Codex](/docs/connectors/codex)
+- [Hermes Agent](/docs/connectors/hermes)
+- [Muse](/docs/connectors/muse)
+
+## Authentication
+
+The server reuses the session `rank login` stored. It does not mint identities,
+and it does not read a token from the agent's own configuration. If
+`rank_evaluate_prospect` reports an unusable session, run `rank login` in a
+terminal; the fix is never to hand the agent a new credential.
+
+## What the results look like
+
+`rank_evaluate_prospect` returns the verdict, the reasons behind it, and the
+provenance of the score: the rerank model that ran and the token cost. The point
+is that an agent can explain a recommendation rather than assert one.
+
+`rank_list_capabilities` and `rank_list_connectors` are read-only and need no
+session, so an agent can orient itself before any sign-in exists.
+
+## Protocol
+
+The server is built on `@modelcontextprotocol/server` 2.1.0 and negotiates
+whichever protocol revision that pinned SDK supports, rather than hardcoding a
+revision of its own. The client and server are tested together as a pair, so a
+client requiring a newer revision than the pinned server will not complete the
+handshake by design.

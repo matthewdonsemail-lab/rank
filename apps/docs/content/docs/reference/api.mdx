@@ -1,0 +1,100 @@
+---
+title: HTTP API
+description: Rank's read-only HTTP routes, the webhooks it receives, and how to reach its Convex functions programmatically.
+---
+
+# HTTP API
+
+Rank's backend is Convex, so there are two ways to reach it over HTTP: Rank's
+own read-only routes, and the Convex public API for calling functions.
+
+## Base URLs
+
+| Deployment | URL |
+| --- | --- |
+| Production | `https://blissful-meerkat-319.convex.cloud` |
+| Development | `https://perceptive-cow-413.convex.cloud` |
+
+The web app at [rank.listeningkit.com](https://rank.listeningkit.com) talks to
+the production deployment. The CLI can be pointed at either with
+`--deployment`.
+
+## Read-only routes
+
+These are registered in `convex/http.ts`. They are read-only by design:
+anything that changes state stays behind an authenticated Convex function rather
+than a public route, so there is no unauthenticated write surface here.
+
+They exist so the same registry and environment manifest the CLI and the MCP
+server read are also available over HTTP. A capability cannot be advertised on
+one surface and missing on another because all three read one catalog.
+
+### `GET /rank/status`
+
+Service status and environment presence.
+
+```json
+{
+  "service": "rank",
+  "capabilities": 8,
+  "environment": {}
+}
+```
+
+The `environment` object is resolved by a Convex query rather than read from the
+process environment, because HTTP actions cannot read `process.env`.
+
+### `GET /rank/environment`
+
+The full environment manifest: every variable Rank reads, which module consumes
+it, and what breaks without it. This is the machine-readable form of
+`rank env`.
+
+### `GET /rank/capabilities`
+
+The capability catalog, exactly as declared in `config/capabilities.json`. Each
+entry carries its CLI command, MCP tool, and HTTP route. This is the
+machine-readable form of `rank capabilities`.
+
+None of these three require authentication.
+
+## Webhooks
+
+Rank receives two webhooks. Both are `POST` and neither is a public write API.
+
+### `POST /agentmail/webhook`
+
+Inbound email events from the AgentMail component, handled by
+`@agentmail/convex`.
+
+### `POST /telnyx/webhook`
+
+SMS events from Telnyx. The raw request body and headers are passed to
+`telnyx.verifyWebhook`, and an unverifiable signature is rejected with `401`
+before any event is processed.
+
+## Calling Convex functions directly
+
+Rank's domain functions are Convex queries, mutations, and actions, reachable
+over the Convex public API:
+
+```bash
+curl -X POST https://blissful-meerkat-319.convex.cloud/api/query \
+  -H 'Content-Type: application/json' \
+  -d '{"path":"myModule:myQuery","args":{}}'
+```
+
+Swap `/api/query` for `/api/mutation` or `/api/action` as appropriate. Public
+functions require no credential; anything reading user-scoped data requires a
+Convex JWT, which is what `rank login` stores.
+
+For the full specification of these endpoints, including batch queries and
+pagination, see the Convex documentation vendored in this repository under
+`docs/convex/public-deployment-api/`.
+
+## Errors
+
+Convex returns HTTP 200 with a `status` of `error` in the body for application
+errors, so check the body rather than relying on the status code alone. Rank's
+CLI converts those into the machine-parsable
+`rank evaluate failed (kind): message` form.

@@ -11,9 +11,15 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-27T05:45:34Z
+- **Last updated:** 2026-09-27T06:03:16Z
 
 ## Log
+
+### 2026-09-27 - full public documentation set on the served docs app — matthewdonsemail-lab
+- Beads: n/a
+- Commit: uncommitted
+- Files: apps/docs/content/docs/index.mdx, apps/docs/content/docs/_meta.json, apps/docs/content/docs/getting-started/, apps/docs/content/docs/concepts/, apps/docs/content/docs/connectors/index.mdx, apps/docs/content/docs/reference/, apps/docs/content/docs/self-hosting.mdx
+- Turned the docs site from a five-page stub into the real public documentation for Rank: a rewritten overview of what the product does and why, a quickstart, an authentication page, concepts pages for how one prospect is walked end to end and for the architecture, a connector showcase index, a reference section for the CLI, the MCP server, the HTTP API, and the environment, and a self-hosting guide. Every claim is grounded in the real code rather than the OpenAPI draft, which the project deliberately does not serve: the capability tables are generated from config/capabilities.json, the connector showcase from the shared registry, the environment tables from config/env-vars.json, and the API page from the routes actually declared in convex/http.ts. Verified while writing that the Convex deployments are live on both production and development but the three read-only /rank routes are not deployed to either, so the API page documents the declared surface and that gap is called out rather than papered over. The connector showcase is a folder index rather than a nav entry, because the registry parity test pins connectors/_meta.json to exactly the registry ids. 19 pages prerender, all 15 served routes return 200, 242 tests pass, and all pre-push gates pass.
 
 ### 2026-09-27 - docs served from the web app at /docs — matthewdonsemail-lab
 - Beads: n/a

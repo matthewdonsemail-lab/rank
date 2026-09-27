@@ -1,0 +1,57 @@
+---
+title: Authentication
+description: How Rank sessions work, where they are stored, and how to use a token in CI.
+---
+
+# Authentication
+
+Rank uses Clerk for identity and issues a Convex JWT for the backend. There is
+one session, and every surface resolves the same one.
+
+## The model
+
+`rank login` mints a Convex JWT template and stores it in a local `.rank/`
+directory. The CLI, the MCP server, and the connectors all read that stored
+session. Connectors never mint identities of their own.
+
+Two variables configure the backend side, and Rank accepts every Clerk issuer it
+actually deploys against:
+
+- `CLERK_JWT_ISSUER` — consumed by `convex/auth.config.ts`
+- `CLERK_JWT_AUDIENCE` — consumed by `convex/auth.config.ts`
+
+One detail worth knowing: Convex only honours the `convex` JWT template. If a
+session token minted from a different template is rejected, sign in again rather
+than trying to work around it.
+
+## Storing and clearing a session
+
+```bash
+rank login     # browser sign-in, stores the session in .rank/
+rank whoami    # show the stored session and whether it is usable
+rank logout    # clear it
+```
+
+`rank whoami` verifies the session rather than just printing it, so it tells you
+whether the stored token is still valid instead of merely present.
+
+## Scripted and CI use
+
+For anything non-interactive, pass a token instead of using the browser:
+
+```bash
+rank login --token "$RANK_AUTH_TOKEN"
+```
+
+`RANK_AUTH_TOKEN` is read by the prospect library and the MCP tools, so exporting
+it is enough for CI. `rank login --json` emits the same result as a machine-
+readable payload when you need to script the sign-in itself.
+
+Read-only surfaces need no session at all. The read-only HTTP routes and the
+read-only MCP tools answer without one.
+
+## What is not stored
+
+`rank login` stores the session in `.rank/`. It is not written to your shell
+profile, not printed, and not persisted anywhere else. Add `.rank/` to your
+ignore files if your working directory is tracked.

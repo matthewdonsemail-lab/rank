@@ -1,0 +1,83 @@
+---
+title: Quickstart
+description: Install the Rank CLI, check your environment, sign in, and evaluate your first prospect.
+---
+
+# Quickstart
+
+This gets you from nothing to an evaluated prospect. It assumes Node and a
+package manager; the Rank CLI is published as `@rank/cli`.
+
+## Install
+
+```bash
+npm install -g @rank/cli
+```
+
+The binary is `rank`. Check that it is on your path:
+
+```bash
+rank --version
+```
+
+## Check your environment
+
+Rank reads a specific set of environment variables. Ask it what it needs before
+you need it:
+
+```bash
+rank doctor
+```
+
+`rank doctor` resolves every variable Rank reads and reports what is missing
+per pipeline stage, so you can see exactly which stage is blocked. To see the
+full inventory, including who consumes each variable and what breaks without
+it, use `rank env`.
+
+## Sign in
+
+Mutating operations need a session:
+
+```bash
+rank login
+```
+
+This opens your browser, completes the Clerk sign-in, and stores the resulting
+session in your local `.rank/` directory. No token is ever written to your
+shell history. Confirm it worked:
+
+```bash
+rank whoami
+```
+
+If you are scripting in CI, skip the browser and pass a token directly:
+
+```bash
+rank login --token "$RANK_AUTH_TOKEN"
+```
+
+See [Authentication](/docs/getting-started/authentication) for how sessions are
+stored and verified.
+
+## Evaluate your first prospect
+
+```bash
+rank evaluate --url https://example.com
+```
+
+That reads the page, reranks it against your grounded brand with Nebius AI
+Studio, judges it with TypeSafe AI, and saves the result. It returns the
+verdict, the reasons, and the provenance of the score.
+
+Useful flags:
+
+- `--title` and `--description` override the page metadata Rank would scrape.
+- `--metrics` takes JSON for any structured signals you want passed through.
+- `--json` emits machine-readable output for scripting.
+
+## Next
+
+- [Connect an agent](/docs/connectors) to drive Rank from Claude Code, Codex,
+  Hermes, or Muse.
+- [CLI reference](/docs/reference/cli) for every command and flag.
+- [Environment](/docs/reference/environment) for the full variable inventory.

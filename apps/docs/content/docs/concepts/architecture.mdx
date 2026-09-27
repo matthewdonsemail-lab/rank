@@ -1,0 +1,80 @@
+---
+title: Architecture
+description: The XState machines, the Convex backend, the provider boundaries, and the repository layout.
+---
+
+# Architecture
+
+## Shape
+
+Rank is a TypeScript workspace. A React web app, a Convex backend, an XState
+orchestration layer, shared libraries, and a CLI and MCP server that both read
+the same capability catalog.
+
+```
+apps/web          React frontend (Vite + TypeScript)
+apps/docs         This documentation site (Next.js + Fumadocs)
+convex            Convex functions, schema, HTTP routes
+lib               Shared business logic and provider clients
+lib/xstate        Workflow machines
+packages/rank-core  Shared domain, including the connector registry
+packages/rank-cli   The rank binary
+packages/rank-mcp   The rank-mcp MCP server
+```
+
+## Orchestration
+
+Workflow state is managed with XState v6 machines rather than ad-hoc booleans.
+The machines are declared per workflow under `lib/xstate/`, one per stage of the
+pipeline, and their contracts are enforced by a pre-push gate
+(`check:machine-docs`) that fails when a machine and its documentation drift
+apart.
+
+## Backend
+
+Convex Cloud holds the database, the server functions, auth, and scheduling.
+Functions are split by domain — `brand`, `competitorDiscovery`,
+`prospectEvaluation`, `outbound`, `email`, `agent`, `treg`, `telnyx` — with the
+schema in `convex/schema.ts`.
+
+Read-only HTTP routes live in `convex/http.ts`. They are read-only by design:
+anything that changes state stays behind an authenticated Convex function rather
+than a public route.
+
+## Provider boundaries
+
+Every external service sits behind a client abstraction, and each has a mock
+implementation used by the test suite:
+
+| Provider | Used for | Boundary |
+| --- | --- | --- |
+| Nebius AI Studio | Reranking prospects | `lib/nebius/rerank/` |
+| TypeSafe AI | Judging a reranked prospect | `lib/typesafe/evaluator/` |
+| Firecrawl | Reading pages | `@firecrawl/firecrawl-convex` |
+| Treg | Competitor discovery | `@listeningkit/treg` |
+| Telnyx | SMS delivery | `@listeningkit/telnyx` |
+| Clerk | Identity | `@clerk/react` + `convex/auth.config.ts` |
+
+The mocks are verified rather than assumed: `pnpm mock:verify` checks the mock
+implementations against their contracts.
+
+## Shared source of truth
+
+Two catalogs keep the surfaces honest:
+
+- `config/capabilities.json` — every capability, with the CLI command, MCP tool,
+  and HTTP route that implement it.
+- `packages/rank-core/src/connectors/` — the connector registry, which the CLI,
+  the MCP server, and this documentation site all read.
+
+A pre-push gate (`check:surfaces`) validates the first against the real CLI, MCP,
+and Convex sources. A unit test pins the second against the served docs, so nav,
+page titles, and frontmatter cannot drift from the registry.
+
+## Conventions
+
+- TypeScript throughout, with strict checking.
+- Libraries follow `lib/{library}/{domainname}/helpers/`, enforced by
+  `check:naming`.
+- No emoji and no monospace font declarations, enforced in pre-push.
+- Every capability change updates `hackathon.md` in the same push.

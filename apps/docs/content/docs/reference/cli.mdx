@@ -1,0 +1,82 @@
+---
+title: CLI reference
+description: Every rank command, what it does, and the capability each one implements.
+---
+
+# CLI reference
+
+The binary is `rank`, published as `@rank/cli`.
+
+## Commands
+
+| Command | Does | Capability |
+| --- | --- | --- |
+| `rank doctor` | Resolve every variable Rank reads, report what is missing per stage | `env.doctor` |
+| `rank env` | List every variable, who consumes it, and what breaks without it | `env.describe` |
+| `rank capabilities` | List every capability and its CLI, MCP, and HTTP surface | `capabilities.list` |
+| `rank connectors` | List agent connectors, or show one with `rank connectors <id>` | `connectors.list` |
+| `rank evaluate` | Judge one prospect against the brand and save the result | `prospect.evaluate` |
+| `rank login` | Sign in and store the session | `auth.login` |
+| `rank logout` | Clear the stored session | `auth.logout` |
+| `rank whoami` | Show the stored session and whether it is usable | `auth.whoami` |
+| `rank install` | Check prerequisites for a pipeline stage | local tooling |
+| `rank launch` | Guided setup that points at the scriptable commands | local tooling |
+
+Every capability in `config/capabilities.json` appears in that table, and
+`check:surfaces` fails the build if a command and its catalog entry diverge.
+
+## `rank evaluate`
+
+The command that does the actual work.
+
+```bash
+rank evaluate --url https://example.com [--title <text>] [--description <text>] [--metrics <json>] [--json]
+```
+
+`--url` is the only required flag. `--title` and `--description` override the
+page metadata Rank would otherwise scrape. `--metrics` takes JSON for structured
+signals to pass through. `--json` emits machine-readable output.
+
+Failures are reported in a machine-parsable form,
+`rank evaluate failed (kind): message`, so scripts can branch on the failure
+rather than scraping prose.
+
+## `rank connectors`
+
+```bash
+rank connectors [--json]
+rank connectors <id> [--json]
+```
+
+Without an id it lists every connector. With one it shows that connector's full
+setup: the stdio command, the arguments, the environment variable names, and
+the authentication note. An unknown id exits non-zero and lists the known ids.
+
+## `rank doctor` and `rank env`
+
+These answer different questions and it is worth knowing which one you want.
+
+`rank doctor` is a preflight for right now. Its scope depends on the surface: the
+CLI reads the linked deployment unless you pass `--local`, the MCP tool reads
+local sources only, and the HTTP route reports deployment presence through a
+Convex query.
+
+`rank env` is the static inventory: every variable Rank reads, which module
+consumes it, and what breaks when it is missing.
+
+## `rank login`, `rank whoami`, `rank logout`
+
+```bash
+rank login   [--web-url <url>] [--deployment <url>] [--token <tok>] [--json]
+rank whoami  [--deployment <url>] [--json]
+rank logout  [--deployment <url>] [--json]
+```
+
+`rank login` stores the session in `.rank/`. `rank whoami` verifies it rather
+than printing it, and tells you to run `rank login` again when the stored token
+is no longer usable. See [Authentication](/docs/getting-started/authentication).
+
+## Exit codes
+
+Commands exit non-zero on failure and print to stderr, so `rank connectors >`
+and `&&` chains behave predictably in scripts.

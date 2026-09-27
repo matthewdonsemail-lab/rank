@@ -1,0 +1,6 @@
+{
+  "cli": "CLI",
+  "mcp": "MCP server",
+  "api": "HTTP API",
+  "environment": "Environment"
+}
