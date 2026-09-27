@@ -67,4 +67,32 @@ describe("connector registry", () => {
     }
     expect(connectorById("nope")).toBeUndefined();
   });
+
+  test("served docs match the registry: nav order, titles, and frontmatter", () => {
+    // The web app serves these files at /docs/connectors/<id> through a
+    // loader over frontmatter plus _meta.json (the Fumadocs shape). Nav,
+    // pages, CLI, MCP, and web all name the same connectors because this
+    // test pins the three sources together.
+    const root = resolveRepoRoot();
+    const meta = JSON.parse(
+      readFileSync(join(root, "apps", "web", "content", "connectors", "_meta.json"), "utf8"),
+    ) as Record<string, string>;
+    expect(Object.keys(meta)).toEqual(CONNECTOR_REGISTRY.connectors.map((connector) => connector.id));
+    for (const connector of CONNECTOR_REGISTRY.connectors) {
+      expect(meta[connector.id]).toBe(connector.name);
+      const raw = readFileSync(join(root, "apps", "web", "content", "connectors", `${connector.id}.md`), "utf8").replace(
+        /\r\n/g,
+        "\n",
+      );
+      const match = /^---\n([\s\S]*?)\n---\n/.exec(raw);
+      expect(match, `${connector.id}.md needs frontmatter`).not.toBeNull();
+      const fields: Record<string, string> = {};
+      for (const line of (match?.[1] ?? "").split("\n")) {
+        const separator = line.indexOf(":");
+        if (separator >= 0) fields[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+      }
+      expect(fields["title"]).toBe(connector.name);
+      expect(fields["description"]?.length ?? 0).toBeGreaterThan(0);
+    }
+  });
 });

@@ -15,6 +15,12 @@
 
 ## Log
 
+### 2026-09-27 - Connector guides served Fumadocs-style at docs/connectors/{name} — matthewdonsemail-lab
+- Beads: n/a
+- Commit: uncommitted
+- Files: apps/web/content/connectors/, apps/web/src/lib/connector-docs.ts, apps/web/src/pages/docs-connectors.tsx, apps/web/src/App.tsx, apps/web/src/vite-env.d.ts, apps/web/package.json, packages/rank-core/src/connectors/connectors.ts, packages/rank-core/src/connectors/connectors.test.ts
+- The guides moved from `docs/agents/<id>/README.md` to `apps/web/content/connectors/<id>.md` (history-preserving renames) so the served docs follow the Fumadocs shape the sibling uses: frontmatter title/description per file, `_meta.json` nav, and a loader (`getConnectorPage`/`getConnectorPages`) over slugs instead of a hardcoded record. Routes `/docs/connectors` and `/docs/connectors/:connectorId` render the exact files agents read — one source, byte-identical. The registry parity test now also pins `_meta.json` order, titles, and frontmatter to the registry. react-markdown renders with brand components (no monospace, no tracking). Verified in the production bundle (guide strings present) with typecheck, build, and all gates green.
+
 ### 2026-09-27 - Agent connectors domain with Hermes, Claude, Codex, Muse parity — matthewdonsemail-lab
 - Beads: n/a
 - Commit: uncommitted
