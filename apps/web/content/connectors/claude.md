@@ -1,4 +1,7 @@
-# Claude Code connector for Rank
+---
+title: Claude Code
+description: Connect Claude Code to Rank over MCP stdio or the rank CLI.
+---
 
 Claude Code consumes Rank over MCP (stdio) for tool calls and over the `rank`
 CLI for scripted work. Both routes reuse the operator's `.rank/` session from

@@ -15,6 +15,12 @@
 
 ## Log
 
+### 2026-09-27 - Removed the superseded /connectors summary page — matthewdonsemail-lab
+- Beads: n/a
+- Commit: uncommitted
+- Files: apps/web/src/App.tsx, apps/web/src/pages/connectors.tsx
+- The registry-summary page at /connectors was superseded by the served guides at /docs/connectors and /docs/connectors/:connectorId and should never have shipped alongside them. Removed the route, the page, and repointed the landing nav at /docs/connectors. Verified the old page markers are absent from the production bundle while the guide content remains.
+
 ### 2026-09-27 - Connector guides served Fumadocs-style at docs/connectors/{name} — matthewdonsemail-lab
 - Beads: n/a
 - Commit: uncommitted

@@ -1,4 +1,7 @@
-# Muse connector for Rank
+---
+title: Muse
+description: Connect Muse to Rank over MCP stdio or the rank CLI.
+---
 
 Codex consumes Rank over MCP (stdio) for tool calls and over the `rank` CLI
 for scripted work. Both routes reuse the operator's `.rank/` session from a

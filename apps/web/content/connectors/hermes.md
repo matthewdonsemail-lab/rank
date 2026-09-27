@@ -1,4 +1,7 @@
-# Hermes Agent connector for Rank
+---
+title: Hermes Agent
+description: Connect Hermes Agent to Rank over MCP stdio or the rank CLI.
+---
 
 Hermes Agent (NousResearch) consumes Rank over MCP (stdio) for tool calls and
 over the `rank` CLI for scripted work. Both routes reuse the operator's

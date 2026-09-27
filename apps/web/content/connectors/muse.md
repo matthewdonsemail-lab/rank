@@ -1,4 +1,7 @@
-# Muse connector for Rank
+---
+title: Muse
+description: What works today and what a real remote Muse connector needs.
+---
 
 > **Status: design draft for remote use, working locally.** Muse builds remote
 > connectors from OpenAPI plus OAuth or API key. Rank has no public REST API
