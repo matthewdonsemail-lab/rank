@@ -25,7 +25,11 @@ function signOutRedirectTarget(): string {
 function useSignedOutGate() {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <OnboardingAuthLoading>Loading sign-in…</OnboardingAuthLoading>;
-  if (isSignedIn) return <Navigate to="/" replace />;
+  // A freshly signed-in visitor belongs at the page that sent them here. The
+  // /cli exchange dies on the base page because its access code is not there,
+  // so hardcoding "/" breaks rank login. Direct visits have no redirectUrl
+  // and still land on home.
+  if (isSignedIn) return <Navigate to={signOutRedirectTarget()} replace />;
   return null;
 }
 
