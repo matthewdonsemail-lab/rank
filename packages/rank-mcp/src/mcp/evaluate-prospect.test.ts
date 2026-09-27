@@ -132,10 +132,11 @@ describe("rank_evaluate_prospect result mapping", () => {
   test("success returns run shape: judgment, scores, and provenance", async () => {
     const seen: Array<{ prospect: unknown; options: EvaluateProspectOptions | undefined }> = [];
     const tool = createEvaluateProspectTool(stubReturning({ ok: true, run: RUN }, seen));
-    const text = await tool.run(
+    const result = await tool.run(
       { url: "https://example.com/article", title: "Example" },
       context(),
     );
+    const text = typeof result === "string" ? result : result.text;
     expect(text).toContain("run_eval_1");
     expect(text).toContain("completed");
     expect(text).toContain("review");
@@ -144,6 +145,14 @@ describe("rank_evaluate_prospect result mapping", () => {
     expect(text).toContain("rerankStatus=ranked");
     expect(text).toContain("homepageRead=true");
     expect(text).toContain("Needs human verification");
+    // Structured half: the same result as fields, so no prose scraping.
+    expect(typeof result === "string" ? null : result.structured).toMatchObject({
+      runId: "run_eval_1",
+      url: "https://example.com/article",
+      state: "completed",
+      judgment: expect.objectContaining({ action: "review", model: expect.anything() }),
+      provenance: expect.objectContaining({ rerankStatus: "ranked", homepageRead: true }),
+    });
     expect(seen).toHaveLength(1);
     expect(seen[0]?.options?.deploymentUrl).toBe(ENV.CONVEX_URL);
     expect(seen[0]?.options?.authToken).toBe(ENV.RANK_AUTH_TOKEN);

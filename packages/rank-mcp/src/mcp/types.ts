@@ -28,9 +28,21 @@ export interface ToolImplementationContext {
   processEnv: Record<string, string | undefined>;
 }
 
+/**
+ * What a tool run hands back. `text` is the human-readable rendering and is
+ * always present; `structured` carries the same result as fields, so an agent
+ * never has to scrape prose for run IDs, states, judgments, or scores. Tools
+ * whose output is already a report (doctor, describe, capabilities) return a
+ * bare string and the server sends text only.
+ */
+export interface ToolResult {
+  text: string;
+  structured?: Record<string, unknown>;
+}
+
 export interface ToolImplementation {
   definition: RankToolDefinition;
-  run(args: Record<string, unknown>, context: ToolImplementationContext): Promise<string> | string;
+  run(args: Record<string, unknown>, context: ToolImplementationContext): Promise<ToolResult | string> | ToolResult | string;
 }
 
 export interface ToolBuildInput {

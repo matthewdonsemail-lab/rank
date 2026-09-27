@@ -50,8 +50,20 @@ export function createServer(context: ToolImplementationContext): Server {
       };
     }
     try {
-      const text = await tool.run((request.params.arguments ?? {}) as Record<string, unknown>, context);
-      return { content: [{ type: "text" as const, text }] };
+      const result = await tool.run((request.params.arguments ?? {}) as Record<string, unknown>, context);
+      if (typeof result === "string") {
+        return { content: [{ type: "text" as const, text: result }] };
+      }
+      // structuredContent travels beside the prose, never instead of it: an
+      // agent reads fields, a human reads text, and neither depends on the
+      // other being parsed.
+      if (result.structured === undefined) {
+        return { content: [{ type: "text" as const, text: result.text }] };
+      }
+      return {
+        content: [{ type: "text" as const, text: result.text }],
+        structuredContent: result.structured,
+      };
     } catch (error) {
       return {
         isError: true,

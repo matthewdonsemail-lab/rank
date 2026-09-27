@@ -116,6 +116,54 @@ function renderEvaluationRun(run: ProspectEvaluationRun): string {
 }
 
 /**
+ * The same run as fields. `metrics` is backend-defined (`v.any()`), so
+ * provenance is extracted best-effort and only present keys are emitted —
+ * never `undefined` values, which JSON drops silently and agents misread as
+ * absent-by-design.
+ */
+function structureEvaluationRun(run: ProspectEvaluationRun): Record<string, unknown> {
+  const structured: Record<string, unknown> = {
+    runId: run.runId,
+    url: run.url,
+    state: run.state,
+    sourceDiscoveryRunId: run.sourceDiscoveryRunId,
+  };
+  const judgment = run.context.judgment;
+  structured["judgment"] =
+    judgment === null
+      ? null
+      : {
+          action: judgment.action,
+          confidence: judgment.confidence,
+          fitScore: judgment.fitScore ?? null,
+          fitConfidence: judgment.fitConfidence ?? null,
+          spamProbability: judgment.spamProbability ?? null,
+          model: judgment.model ?? null,
+          route: judgment.route ?? null,
+          reasons: judgment.reasons,
+        };
+  const metrics = run.context.prospect.metrics;
+  if (typeof metrics === "object" && metrics !== null) {
+    const record = metrics as Record<string, unknown>;
+    const provenance: Record<string, unknown> = {};
+    for (const key of [
+      "rerankStatus",
+      "rerankScore",
+      "rerankModel",
+      "rerankReason",
+      "rerankLatencyMs",
+      "rerankTokens",
+      "homepageRead",
+    ]) {
+      if (key in record && record[key] !== undefined) provenance[key] = record[key];
+    }
+    if (Object.keys(provenance).length > 0) structured["provenance"] = provenance;
+  }
+  if (run.context.error) structured["error"] = run.context.error;
+  return structured;
+}
+
+/**
  * Build the `rank_evaluate_prospect` tool.
  *
  * The operation is injectable so tests can stub it; production uses the shared
@@ -160,7 +208,7 @@ export function createEvaluateProspectTool(
         if (!result.ok) {
           return `rank_evaluate_prospect failed [${result.error.kind}]: ${result.error.message}`;
         }
-        return renderEvaluationRun(result.run);
+        return { text: renderEvaluationRun(result.run), structured: structureEvaluationRun(result.run) };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return `rank_evaluate_prospect failed [transport]: ${message}`;

@@ -1,3 +1,13 @@
+> **Status: design draft, not a working contract.** The REST endpoints and
+> OAuth/API-key flows described in this directory do not exist. The working
+> Rank surfaces are: the `rank` CLI (`rank evaluate`, `rank doctor`,
+> `rank whoami`, `rank login`), the MCP server over stdio
+> (`rank_evaluate_prospect` returns text plus `structuredContent`), and
+> authenticated Convex functions. The only HTTP routes are read-only metadata
+> (`/rank/status`, `/rank/environment`, `/rank/capabilities`) plus provider
+> webhooks - see `convex/http.ts` and `config/capabilities.json`. Do not hand
+> the endpoint paths below to an agent as callable.
+
 # Authentication Methods for Rank API
 
 This document details the authentication methods available for Rank API when integrating with Muse.

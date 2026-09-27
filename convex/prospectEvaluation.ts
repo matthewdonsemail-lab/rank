@@ -2,7 +2,7 @@ import { createActor } from "xstate";
 import type { GenericActionCtx, GenericQueryCtx } from "convex/server";
 import { ConvexError, v, type GenericId } from "convex/values";
 import { FirecrawlCrawlClient, mapWithConcurrency, normalizeCrawlUrl, summarizePage } from "../lib/firecrawl/crawl/index.js";
-import { NebiusRerankClient, rankCandidates, type BrandFacts } from "../lib/nebius/rerank/index.js";
+import { NebiusRerankClient, buildBrandQuery, candidateDocument, rankCandidates, type BrandFacts } from "../lib/nebius/rerank/index.js";
 import { TypeSafeEvaluator } from "../lib/typesafe/evaluator/index.js";
 import type {
   LinkProspect,
@@ -632,12 +632,18 @@ export const startCompetitorProspectEvaluations = action({
           ...(await fetchHomepages(ctx, toRank.slice(0, MAX_HOMEPAGES).map((c) => c.domain))),
           ...toRank.slice(MAX_HOMEPAGES).map(() => null),
         ];
+    const rankStartedAt = Date.now();
     const { ranked, rank } = await rankCandidates(
       process.env.NEBIUS_API_KEY ? new NebiusRerankClient() : null,
       brand,
       toRank.map((candidate, index) => ({ ...candidate, page: pages[index] })),
       limit,
     );
+    const rerankLatencyMs = Date.now() - rankStartedAt;
+    // The query is run-level: every candidate in this batch was ranked against
+    // the same brand question. It is stored per prospect so each row explains
+    // itself without joining back to the run.
+    const rerankQuery = brand ? buildBrandQuery(brand) : null;
 
     if (rank.status !== "ranked") console.log(`prospect ranking ${rank.status}: ${rank.reason}`);
 
@@ -661,6 +667,16 @@ export const startCompetitorProspectEvaluations = action({
           sourceEndpoint: candidate.sourceEndpoint,
           rerankScore,
           rerankStatus: rank.status,
+          // Provenance: what the ranker saw (query + this candidate's
+          // document) and what it answered (model, latency, tokens). The
+          // reason is stored when the list was NOT ranked, so an unranked
+          // list is never passed off as ranked.
+          rerankModel: rank.status === "ranked" ? rank.model : null,
+          rerankReason: rank.status === "ranked" ? null : rank.reason,
+          rerankLatencyMs,
+          rerankTokens: rank.status === "ranked" ? rank.totalTokens : null,
+          rerankQuery,
+          rankedDocument: candidateDocument({ ...candidate, page }),
           homepageRead: page !== null && page !== undefined,
         },
       };

@@ -1,3 +1,7 @@
+# STATUS: DESIGN DRAFT, NOT A WORKING CONTRACT.
+# None of the paths below exist. Working surfaces: rank CLI, MCP stdio server,
+# authenticated Convex functions. Only HTTP routes: /rank/status,
+# /rank/environment, /rank/capabilities + provider webhooks (convex/http.ts).
 openapi: 3.1.0
 info:
   title: Rank by ListeningKit API

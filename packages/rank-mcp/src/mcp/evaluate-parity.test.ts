@@ -7,6 +7,7 @@ import type {
 import type { CommandContext } from "../../../rank-cli/src/cli/types.ts";
 import { evaluateDeps, exitCodeForEvaluateError, runEvaluate } from "../../../rank-cli/src/cli/commands/evaluate.ts";
 import { createEvaluateProspectTool } from "./tools.ts";
+import type { ToolResult } from "./types.ts";
 
 // Mirror: packages/rank-cli/src/cli/commands/evaluate-parity.test.ts contains
 // the same suite with adjusted import paths, so `bun test` in EITHER adapter
@@ -23,8 +24,9 @@ import { createEvaluateProspectTool } from "./tools.ts";
  *   operation-transport per exitCodeForEvaluateError) + stdout (human text,
  *   or the raw run as JSON with --json) + stderr (human error line, or
  *   {ok:false,error} as JSON with --json).
- * - MCP: a single returned string — either the rendered run text
- *   (renderEvaluationRun) or `rank_evaluate_prospect failed [kind]: message`.
+ * - MCP: the rendered run text (renderEvaluationRun) plus a structuredContent
+ *   payload carrying run ID, state, judgment, scores, reasons and provenance,
+ *   or `rank_evaluate_prospect failed [kind]: message`.
  *
  * normalizeCli / normalizeMcp strip exactly that framing and recover one of:
  *   { ok:true, runId, url, state, action, confidence, rerankStatus, homepageRead }
@@ -174,12 +176,17 @@ async function driveMcp(
   stubResult: EvaluateProspectResult,
   args: Record<string, unknown>,
   seen: Array<{ prospect: unknown; options: unknown }>,
-): Promise<string> {
+): Promise<ToolResult | string> {
   const tool = createEvaluateProspectTool(async (prospect: unknown, options?: unknown) => {
     seen.push({ prospect, options });
     return stubResult;
   });
   return tool.run(args, { root: "parity-root", processEnv: { ...ENV } });
+}
+
+/** The prose half of a tool result, for the human-rendering assertions. */
+function asText(result: ToolResult | string): string {
+  return typeof result === "string" ? result : result.text;
 }
 
 describe("prospect.evaluate cross-adapter parity", () => {
@@ -189,7 +196,8 @@ describe("prospect.evaluate cross-adapter parity", () => {
     const stub: EvaluateProspectResult = { ok: true, run: RUN };
 
     const cli = await driveCli(stub, ["--url", "https://example.com/parity", "--json"], cliSeen);
-    const mcpText = await driveMcp(stub, { url: "https://example.com/parity" }, mcpSeen);
+    const mcpResult = await driveMcp(stub, { url: "https://example.com/parity" }, mcpSeen);
+    const mcpText = asText(mcpResult);
 
     expect(cli.code).toBe(0);
     const cliNorm = normalizeCli(cli.code, cli.out, cli.err);
@@ -209,6 +217,14 @@ describe("prospect.evaluate cross-adapter parity", () => {
     });
     expect(cliSeen).toHaveLength(1);
     expect(mcpSeen).toHaveLength(1);
+    // The structured half of the same result: agents read fields, never prose.
+    expect(typeof mcpResult === "string" ? null : mcpResult.structured).toMatchObject({
+      runId: "run_parity_1",
+      url: "https://example.com/parity",
+      state: "completed",
+      judgment: expect.objectContaining({ action: "review", confidence: 0.62 }),
+      provenance: expect.objectContaining({ rerankStatus: "ranked" }),
+    });
   });
 
   test("same logical input reaches the shared operation identically", async () => {
@@ -308,7 +324,7 @@ describe("prospect.evaluate cross-adapter parity", () => {
       const stub: EvaluateProspectResult = { ok: false, error: { kind, message } };
       // Awaiting directly: any throw across the adapter boundary fails the test.
       const cli = await driveCli(stub, ["--url", "https://example.com/parity", "--json"], []);
-      const mcpText = await driveMcp(stub, { url: "https://example.com/parity" }, []);
+      const mcpText = asText(await driveMcp(stub, { url: "https://example.com/parity" }, []));
 
       expect(cli.code).toBe(exitCode);
       expect(cli.code).toBe(exitCodeForEvaluateError({ kind, message }));
@@ -328,7 +344,7 @@ describe("prospect.evaluate cross-adapter parity", () => {
   test("human rendering: both carry run/state/judgment; MCP additionally carries provenance", async () => {
     const stub: EvaluateProspectResult = { ok: true, run: RUN };
     const cli = await driveCli(stub, ["--url", "https://example.com/parity"], []);
-    const mcpText = await driveMcp(stub, { url: "https://example.com/parity" }, []);
+    const mcpText = asText(await driveMcp(stub, { url: "https://example.com/parity" }, []));
 
     expect(cli.code).toBe(0);
     for (const needle of ["run_parity_1", "completed", "review", "0.62"]) {
