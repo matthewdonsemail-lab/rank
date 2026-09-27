@@ -21,13 +21,15 @@ function Landing({ authEnabled, isSignedIn }: Required<Pick<AppProps, "authEnabl
           { href: "#hero", label: "Get started", variant: "cta" },
         ];
 
+  const navItems: HeaderItem[] = [{ href: "/docs", label: "Docs" }];
+
   return (
     <div className="min-h-screen bg-paper text-ink">
       <Header
         tone="light"
         homeHref="/"
         logoLabel="ListeningKit"
-        navItems={[]}
+        navItems={navItems}
         isLoggedIn={isSignedIn}
         accountItems={accountItems}
       />

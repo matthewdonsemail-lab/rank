@@ -11,9 +11,15 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-27T05:28:57Z
+- **Last updated:** 2026-09-27T05:40:06Z
 
 ## Log
+
+### 2026-09-27 - docs served from the web app at /docs — matthewdonsemail-lab
+- Beads: n/a
+- Commit: uncommitted
+- Files: scripts/build-docs-export.mjs, apps/docs/next.config.ts, apps/web/package.json, apps/web/vercel.json, apps/web/src/App.tsx, .gitignore
+- The docs no longer need a second host. scripts/build-docs-export.mjs builds the real Fumadocs app with DOCS_EXPORT=1, then mounts the static output inside apps/web/public/docs, so the same notebook layout, sidebar, table of contents, and search are served by the web app at /docs with no separate deployment or domain. Next's export only rewrites bundled assets under assetPrefix, so the export runs with assetPrefix /docs and the sync re-prefixes the public assets it leaves at the export root, which is what makes the Satoshi fonts and logo resolve under the mount point. The web build runs the export first, so the docs can never drift from the app that serves them, and the generated tree is gitignored. apps/web/vercel.json turns on cleanUrls so extensionless /docs/connectors/codex resolves to the exported page, and the landing header links to /docs. Verified against a static server that mirrors Vercel routing: /, /docs, /docs/, all four connector pages, /docs.txt, the generated stylesheet, and a font all return 200, and the single-page routes still fall back to the app shell.
 
 ### 2026-09-27 - Fumadocs docs app, Codex naming correction, and React 18 type resolution — matthewdonsemail-lab
 - Beads: n/a

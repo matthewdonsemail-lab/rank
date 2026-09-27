@@ -28,6 +28,9 @@ out/
 .next/
 *.tsbuildinfo
 
+# Generated docs export served by the web app (rebuilt by scripts/build-docs-export.mjs)
+apps/web/public/docs/
+
 # Logs & Debug
 *.log
 npm-debug.log*

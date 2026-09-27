@@ -9,8 +9,11 @@ const withMDX = createMDX();
 
 // DOCS_EXPORT=1 builds plain static files (out/) that ship inside the web
 // app's hosting; without it this is the normal Next server build.
+const isExport = Boolean(process.env.DOCS_EXPORT);
+
 const config: NextConfig = {
-  ...(process.env.DOCS_EXPORT ? { output: "export" as const } : {}),
+  ...(isExport ? { output: "export" as const } : {}),
+  ...(isExport ? { assetPrefix: "/docs" } : {}),
   reactStrictMode: false,
   images: {
     unoptimized: true,
