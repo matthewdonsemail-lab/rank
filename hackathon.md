@@ -11,9 +11,16 @@
 - **Inference Backends:** Nebius AI Studio (BAAI/bge-reranker-v2-m3, Llama-3.3, DeepSeek), TypeSafe AI (Jev / System One)
 - **Protocols:** REST API & Model Context Protocol (MCP)
 - **Started:** 2026-09-25T01:57:00Z
-- **Last updated:** 2026-09-26T18:38:00Z
+- **Last updated:** 2026-09-27T05:28:57Z
 
 ## Log
+
+### 2026-09-27 - Fumadocs docs app, Codex naming correction, and React 18 type resolution — matthewdonsemail-lab
+- Beads: n/a
+- Commit: uncommitted
+- Files: apps/docs/, apps/web/src/App.tsx, apps/web/package.json, apps/web/tsconfig.json, apps/web/vite.config.ts, apps/web/src/vite-env.d.ts, apps/web/src/lib/connector-docs.ts, apps/web/src/pages/docs-connectors.tsx, apps/web/content/connectors/, packages/rank-core/src/connectors/, package.json, pnpm-lock.yaml
+- New apps/docs Next.js 15 + Fumadocs 15.7.8 app mirroring the sibling: source.config.ts collection over content/docs, notebook layout, catch-all slug routes with table of contents, Satoshi-only theme tokens, Rank branding. Connector guides moved from the Vite content dir to apps/docs/content/docs/connectors/*.mdx with frontmatter intact; the Vite react-markdown docs layer (routes, loader, dependency, aliases, raw import declaration) is removed so Fumadocs is the single served surface. Registry docPaths and the parity test follow the move. Corrected the Codex connector, which was mislabelled "Muse" in the registry, the connector navigation meta, the docs frontmatter, and the docs index, so the CLI, the MCP server, and the four served pages all name it Codex. Adding the React 19 docs workspace to the pnpm store made @clerk/react, react-router-dom, and @floating-ui/react resolve their peers through the hoisted virtual store, so their type declarations picked up React 19 types and apps/web failed typecheck with 271 JSX errors; apps/web/tsconfig.json now pins react, react/jsx-runtime, react/jsx-dev-runtime, react-dom, and react-dom/client to its own React 18 type packages. Proven with next build (9 static pages) and next start: /docs, all four connector pages, sidebar navigation, and search render with correct titles, and apps/web typecheck is clean.
+
 
 ### 2026-09-27 - Removed the superseded /connectors summary page — matthewdonsemail-lab
 - Beads: n/a

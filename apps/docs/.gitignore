@@ -1,0 +1,5 @@
+node_modules/
+.next/
+.source/
+.next-dev/
+tsconfig.tsbuildinfo

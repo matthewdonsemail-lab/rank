@@ -1,0 +1,117 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/preset.css";
+
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-Light.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-LightItalic.woff") format("woff");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-Italic.woff") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-MediumItalic.woff") format("woff");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-BoldItalic.woff") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-Black.woff") format("woff");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-webfont/Satoshi-BlackItalic.woff") format("woff");
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Satoshi", "Inter", system-ui, sans-serif;
+  /* Satoshi-only rule: fumadocs-ui internals (search dialog, code, kbd)
+   * use the mono font utility / mono element defaults, which resolve
+   * from the mono font variable. Point it at Satoshi too so no
+   * monospace stack can ever render in the docs. Same for serif —
+   * nothing should fall back to a Georgia stack either. */
+  --font-mono: "Satoshi", "Inter", system-ui, sans-serif;
+  --font-serif: "Satoshi", "Inter", system-ui, sans-serif;
+
+  --color-fd-background: #fbfcfe;
+  --color-fd-foreground: #0d2a4c;
+  --color-fd-muted: #f1f5fb;
+  --color-fd-muted-foreground: #5b7089;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #0d2a4c;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #0d2a4c;
+  --color-fd-border: rgba(13, 42, 76, 0.12);
+  --color-fd-primary: #2a8cff;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #eff6ff;
+  --color-fd-secondary-foreground: #0d2a4c;
+  --color-fd-accent: #dbeafe;
+  --color-fd-accent-foreground: #1e3a8a;
+  --color-fd-ring: #2a8cff;
+
+  --color-primary: var(--color-fd-primary);
+  --color-primary-foreground: var(--color-fd-primary-foreground);
+  --color-background: var(--color-fd-background);
+  --color-foreground: var(--color-fd-foreground);
+}

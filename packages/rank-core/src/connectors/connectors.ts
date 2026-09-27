@@ -50,7 +50,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     },
     capabilities: PROSPECT_CAPS,
     stdio: { command: "bun", args: STDIO_ARGS, env: STDIO_ENV, authNote: STDIO_AUTH_NOTE },
-    docPath: "apps/web/content/connectors/claude.md",
+    docPath: "apps/docs/content/docs/connectors/claude.mdx",
     limits: [
       "Default MAX_MCP_OUTPUT_TOKENS is 25,000; large evaluations can hit it — raise it or read structuredContent, which stays small.",
       "Scopes are local, project, or user (--scope); prefer project so the team shares the server entry.",
@@ -59,7 +59,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
   },
   {
     id: "codex",
-    name: "Muse",
+    name: "Codex",
     vendor: "OpenAI",
     description:
       "OpenAI's terminal agent. Connects over MCP via the `[mcp_servers]` table in config.toml; stdio for this server.",
@@ -82,7 +82,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     },
     capabilities: PROSPECT_CAPS,
     stdio: { command: "bun", args: STDIO_ARGS, env: STDIO_ENV, authNote: STDIO_AUTH_NOTE },
-    docPath: "apps/web/content/connectors/codex.md",
+    docPath: "apps/docs/content/docs/connectors/codex.mdx",
     limits: [
       "The table is [mcp_servers] — the [mcp.servers.*] spelling is silently ignored (openai/codex#3441).",
       "Every stdio entry must declare command; there is no default binary.",
@@ -114,7 +114,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     },
     capabilities: PROSPECT_CAPS,
     stdio: { command: "bun", args: STDIO_ARGS, env: STDIO_ENV, authNote: STDIO_AUTH_NOTE },
-    docPath: "apps/web/content/connectors/hermes.md",
+    docPath: "apps/docs/content/docs/connectors/hermes.mdx",
     limits: [
       "`hermes import-agent claude-code` migrates an existing Claude MCP block, skills, and instructions automatically.",
       "Start with one server and ask Hermes what tools it sees before adding more.",
@@ -142,7 +142,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
       },
     },
     capabilities: [],
-    docPath: "apps/web/content/connectors/muse.md",
+    docPath: "apps/docs/content/docs/connectors/muse.mdx",
     limits: [
       "Do not hand Muse the openapi-rank.yaml paths as callable — they are a design draft, labeled as such at the top of every file.",
       "Unblocks when prospect.evaluate gains an authenticated public route with auth, ownership, rate limits, and idempotency.",

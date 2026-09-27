@@ -41,7 +41,10 @@
     "docs:telnyx": "node scripts/pull-telnyx-docs.mjs",
     "web:dev": "pnpm --dir apps/web dev",
     "web:build": "pnpm --dir apps/web build",
-    "web:typecheck": "pnpm --dir apps/web typecheck"
+    "web:typecheck": "pnpm --dir apps/web typecheck",
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build",
+    "docs:typecheck": "pnpm --filter docs typecheck"
   },
   "keywords": [
     "nebius",

@@ -1,0 +1,19 @@
+---
+title: Rank Docs
+description: Agent connectors and evaluation docs for Rank by ListeningKit.
+---
+
+# Rank Docs
+
+How agents reach Rank, and how ranking works.
+
+## Connectors
+
+- [Claude Code](/docs/connectors/claude) — Anthropic's terminal agent over MCP stdio.
+- [Codex](/docs/connectors/codex) — OpenAI's terminal agent over MCP stdio.
+- [Hermes Agent](/docs/connectors/hermes) — NousResearch's agent runtime over MCP stdio.
+- [Muse](/docs/connectors/muse) — Meta's agent; remote use needs the planned HTTP API.
+
+All four read the same connector registry as the CLI (`rank connectors`) and
+the MCP server (`rank_list_connectors`). Authenticate once with `rank login`;
+connectors reuse that session and never mint identities.

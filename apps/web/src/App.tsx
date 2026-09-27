@@ -5,7 +5,6 @@ import { MessagingPlatform } from "./landing/MessagingPlatform";
 import { SignInRoute, SignUpRoute } from "./pages/auth";
 import { OAuthCallbackRoute, OAuthCallbackSignUpRoute } from "./pages/oauth-callback";
 import { CliLoginPage } from "./pages/cli";
-import { DocsConnectorPage, DocsConnectorsIndex } from "./pages/docs-connectors";
 
 type AppProps = {
   authEnabled?: boolean;
@@ -28,7 +27,7 @@ function Landing({ authEnabled, isSignedIn }: Required<Pick<AppProps, "authEnabl
         tone="light"
         homeHref="/"
         logoLabel="ListeningKit"
-        navItems={[{ href: "/docs/connectors", label: "Connectors" }]}
+        navItems={[]}
         isLoggedIn={isSignedIn}
         accountItems={accountItems}
       />
@@ -72,9 +71,6 @@ export function App({ authEnabled = false, isSignedIn = false }: AppProps) {
           path="/cli-login"
           element={authEnabled ? <CliLoginPage /> : <Navigate to="/" replace />}
         />
-        {/* Rendered guides: the exact content-collection files agents read. */}
-        <Route path="/docs/connectors" element={<DocsConnectorsIndex />} />
-        <Route path="/docs/connectors/:connectorId" element={<DocsConnectorPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -14,19 +14,17 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@listeningkit/ui": ["./src/ui.tsx"],
-      "@rank/connectors": ["../../packages/rank-core/src/connectors/index.ts"]
+      "react": ["./node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
+      "react/jsx-dev-runtime": ["./node_modules/@types/react/jsx-dev-runtime.d.ts"],
+      "react-dom": ["./node_modules/@types/react-dom/index.d.ts"],
+      "react-dom/client": ["./node_modules/@types/react-dom/client.d.ts"]
     }
   },
-  "include": [
-    "src",
-    "../../packages/rank-core/src/connectors/index.ts",
-    "../../packages/rank-core/src/connectors/types.ts",
-    "../../packages/rank-core/src/connectors/connectors.ts"
-  ],
+  "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
