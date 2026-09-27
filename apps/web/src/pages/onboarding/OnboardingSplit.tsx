@@ -76,8 +76,13 @@ export function OnboardingSplit({
     <OnboardingShell hero={false} tone="white">
       <main className="relative flex w-full flex-1 flex-col">
         <div className="grid w-full flex-1 items-stretch text-left lg:grid-cols-2">
-          <div className="bg-white p-8 lg:p-32">
-            <div className="mx-auto w-full max-w-xs text-center">
+          {/* The form column needs room for Clerk's inputs. At the `lg`
+              breakpoint each grid column is 512px, so `lg:p-32` (128px a side)
+              left only 256px of content inside a 320px `max-w-xs` — the inputs
+              were clipped. `lg:p-12` plus max-w-sm keeps the column wider than
+              the form at every breakpoint. */}
+          <div className="bg-white p-8 lg:p-12">
+            <div className="mx-auto w-full max-w-sm text-center">
               <a href="/" aria-label="Rank home" className="mb-6 inline-block">
                 <img src="/logo.svg" alt="Rank" className="size-14 rounded-[14px] object-contain" />
               </a>

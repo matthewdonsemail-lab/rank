@@ -65,6 +65,14 @@ pre {
   font-family: inherit;
 }
 
+/* Clerk brings its own font-family onto its subtree, which drops the auth
+   screens off the Satoshi stack and onto a fallback. The brand rule is
+   Satoshi/Inter only, so the Clerk column inherits like everything else. */
+.lk-clerk,
+.lk-clerk * {
+  font-family: inherit;
+}
+
 body {
   min-width: 320px;
   margin: 0;
