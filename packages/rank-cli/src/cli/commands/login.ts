@@ -29,7 +29,9 @@
  * Either way the token is validated against the linked deployment before
  * anything is written, and never printed in full.
  */
+import { spinner } from "@clack/prompts";
 import { spawn } from "node:child_process";
+import { styleText } from "node:util";
 import http from "node:http";
 import {
   BASE64URL_RE,
@@ -37,6 +39,8 @@ import {
   generateCodeVerifier,
   generateState,
   validateSessionToken,
+  formatTokenIdentity,
+  summarizeTokenIdentity,
 } from "../../../../rank-core/src/auth/index.ts";
 import { maskSecret } from "../../../../rank-core/src/env/index.ts";
 import { loadRankHome, normalizeDeploymentUrl, removeSession, saveSession } from "../../../../rank-core/src/rank-home/index.ts";
@@ -343,9 +347,13 @@ const send = (status: number, body: string, type: string) => {
 export const loginDeps: {
   openBrowser: (url: string) => { ok: boolean; error?: string };
   timeoutMs: number;
+  stdoutIsTTY: () => boolean;
+  createWaitIndicator: (options: { json: boolean; write: (line: string) => void }) => WaitIndicator;
 } = {
   openBrowser: openBrowserDefault,
   timeoutMs: EXCHANGE_TIMEOUT_MS,
+  stdoutIsTTY: () => Boolean(process.stdout?.isTTY),
+  createWaitIndicator: createWaitIndicatorDefault,
 };
 
 /** Transport seam for tests: replace with a stub to skip the network. */
@@ -354,6 +362,80 @@ export const loginValidateDeps: {
 } = {
   validate: validateSessionToken,
 };
+
+// ---------------------------------------------------------------------------
+// Wait indicator
+// ---------------------------------------------------------------------------
+
+/**
+ * The live "waiting for the browser" affordance. Every method must be safe to
+ * call on a no-op, because the wait has four exits (success, rejection,
+ * timeout, throw) and a missed `stop` leaves a stranded frame on the terminal.
+ */
+export interface WaitIndicator {
+  start(message: string): void;
+  message(message: string): void;
+  succeed(message: string): void;
+  fail(message: string): void;
+}
+
+const WAIT_MESSAGE = "Waiting for sign-in to complete…";
+
+/**
+ * Brand blue, matching the #2A8CFF the web auth screens use, so the terminal
+ * and the browser read as one surface.
+ */
+const ACCENT = "blue";
+
+/**
+ * A dot spinner while we block on the loopback exchange.
+ *
+ * It degrades to the single static line it has always printed whenever an
+ * animated line would be wrong: `--json`, because the report has to stay
+ * parseable, and a non-TTY stdout, because CI logs and pipes collect the
+ * frames into noise. `styleText` drops the colour on its own when the stream
+ * has no colour support, and clack's frames fall back to ASCII when the
+ * terminal cannot render the geometric ones.
+ */
+function createWaitIndicatorDefault(options: { json: boolean; write: (line: string) => void }): WaitIndicator {
+  if (options.json) {
+    // The machine report owns stdout; even one static line would make the
+    // whole report unparseable. Progress still lands in the step objects.
+    return {
+      start: () => undefined,
+      message: () => undefined,
+      succeed: () => undefined,
+      fail: () => undefined,
+    };
+  }
+  if (!loginDeps.stdoutIsTTY()) {
+    return {
+      start: (message) => options.write(message),
+      // The static line is already on screen; repeating it per state change
+      // would just duplicate it.
+      message: () => undefined,
+      succeed: () => undefined,
+      fail: () => undefined,
+    };
+  }  const active = spinner({
+    indicator: "dots",
+    output: process.stdout,
+    styleFrame: (frame) => styleText(ACCENT, frame),
+  });
+  // An empty message resolves the frame without printing a line, because the
+  // caller already reports the outcome in its own words. A non-empty one is
+  // used when the wait itself is the news.
+  const settle = (message: string, method: "stop" | "error") => {
+    if (message === "") active.clear();
+    else active[method](message);
+  };
+  return {
+    start: (message) => active.start(styleText(ACCENT, message)),
+    message: (message) => active.message(styleText(ACCENT, message)),
+    succeed: (message) => settle(message, "stop"),
+    fail: (message) => settle(message, "error"),
+  };
+}
 
 function openBrowserDefault(url: string): { ok: boolean; error?: string } {
   try {
@@ -441,6 +523,18 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
   let authToken: string;
   let source: "browser" | "paste";
 
+  // One indicator for the whole wait, settled exactly once. The exchange has
+  // four exits and three of them are past this point (validation failure,
+  // storage failure, success), so the settle is guarded rather than trusted.
+  const wait = loginDeps.createWaitIndicator({ json, write: context.out });
+  let waiting = false;
+  const settleWait = (ok: boolean, message = "") => {
+    if (!waiting) return;
+    waiting = false;
+    if (ok) wait.succeed(message);
+    else wait.fail(message);
+  };
+
   if (token) {
     authToken = token;
     source = "paste";
@@ -461,9 +555,14 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
       verifyToken: async (candidate) => {
         const outcome = await loginValidateDeps.validate({ deploymentUrl: deployment, authToken: candidate });
         if (outcome.ok) return undefined;
-        return outcome.error.kind === "auth"
-          ? "The deployment rejected this session. Sign in again, then retry — rank login is still waiting."
-          : outcome.error.message;
+        if (outcome.error.kind !== "auth") return outcome.error.message;
+        // Append only the routing claims, never the token: iss and aud name
+        // which instance minted the token and which audience it targets, which
+        // is precisely what a NoAuthProvider mismatch turns on. A common cause
+        // is a page that sent the default session token (aud=<clerk-domain>)
+        // instead of the `convex` template one (aud=convex).
+        const who = formatTokenIdentity(summarizeTokenIdentity(candidate));
+        return `The deployment rejected this session${who}. It accepts the "convex" JWT template — sign in again, then retry; rank login is still waiting.`;
       },
     });
     let exchangeUrl: string;
@@ -476,16 +575,23 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
     }
     const authorize = buildAuthorizeUrl(webUrl, state, challenge, exchangeUrl);
     try {
-      context.out(`Opening browser: ${authorize}`);
+      // In --json mode stdout must stay parseable: the machine report owns it
+      // and these human lines go to stderr, matching the evaluate contract.
+      const say = json ? context.err : context.out;
+      say(`Opening browser: ${authorize}`);
       const opened = loginDeps.openBrowser(authorize);
       if (json) context.out(JSON.stringify({ step: "browser", ok: opened.ok, url: authorize }, null, 2));
       if (!opened.ok) {
-        context.out(`Could not open a browser automatically${opened.error ? ` (${opened.error})` : ""}. Open this URL manually: ${authorize}`);
+        say(`Could not open a browser automatically${opened.error ? ` (${opened.error})` : ""}. Open this URL manually: ${authorize}`);
       }
-      context.out("Waiting for sign-in to complete…");
+      wait.start(WAIT_MESSAGE);
+      waiting = true;
 
       const outcome = await exchange.result;
       if (!outcome.ok) {
+        // Settle before the failure is reported, or the terminal keeps a
+        // spinning frame above the error text.
+        settleWait(false);
         if (json) context.out(JSON.stringify({ step: "exchange", ok: false, error: outcome.error }, null, 2));
         return fail(
           context,
@@ -498,6 +604,10 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
       }
       authToken = outcome.token;
       source = "browser";
+    } catch (error) {
+      // A throw here still has to clear the frame.
+      settleWait(false);
+      throw error;
     } finally {
       exchange.close();
     }
@@ -509,6 +619,7 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
       validation.error.kind === "auth"
         ? "The deployment rejected the session token. Sign in again and re-run rank login."
         : validation.error.message;
+    settleWait(false);
     if (json) context.out(JSON.stringify({ step: "validate", ok: false, kind: validation.error.kind }, null, 2));
     return fail(context, json, "login", message);
   }
@@ -523,8 +634,11 @@ export async function runLogin(context: CommandContext, argv: string[]): Promise
     stored = result.record;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    settleWait(false);
     return fail(context, json, "login", `Could not store the session in .rank/: ${message}`);
   }
+
+  settleWait(true);
 
   const report: JsonReport = {
     ok: true,

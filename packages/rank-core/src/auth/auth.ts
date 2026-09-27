@@ -7,9 +7,56 @@
  */
 import { ConvexHttpClient } from "convex/browser";
 import { convexErrorMessage, isConvexError } from "../convex/index.ts";
-import type { ConvexQueryCaller, ValidateSessionOptions, ValidateSessionResult } from "./types.ts";
+import type { ConvexQueryCaller, TokenIdentitySummary, ValidateSessionOptions, ValidateSessionResult } from "./types.ts";
 
 export const VALIDATION_PATH = "prospectEvaluation:listProspectEvaluationRuns";
+
+function base64UrlDecode(segment: string): string {
+  const padded = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const remainder = padded.length % 4;
+  const normalized = remainder === 0 ? padded : padded + "=".repeat(4 - remainder);
+  // atob is available in Node 16+, browsers, and bun.
+  return atob(normalized);
+}
+
+/**
+ * Reads only the `iss` and `aud` claims from a JWT's payload segment.
+ *
+ * These two claims are routing metadata, not secrets — they name which
+ * identity instance minted the token and which audience it is for, which is
+ * exactly the information a `NoAuthProvider` rejection turns on. Nothing else
+ * is extracted: no subject, no expiry, no signature, and the token itself is
+ * never included in any returned or rendered string. Returns `{}` for anything
+ * that is not a decodable two-or-three-segment token.
+ */
+export function summarizeTokenIdentity(authToken: string): TokenIdentitySummary {
+  try {
+    const segments = authToken.split(".");
+    if (segments.length < 2) return {};
+    const payload: unknown = JSON.parse(base64UrlDecode(segments[1] ?? ""));
+    if (typeof payload !== "object" || payload === null) return {};
+    const record = payload as Record<string, unknown>;
+    const summary: TokenIdentitySummary = {};
+    if (typeof record["iss"] === "string" && record["iss"] !== "") summary.iss = record["iss"];
+    const aud = record["aud"];
+    if (typeof aud === "string" && aud !== "") {
+      summary.aud = aud;
+    } else if (Array.isArray(aud) && aud.every((entry) => typeof entry === "string")) {
+      summary.aud = (aud as string[]).join(",");
+    }
+    return summary;
+  } catch {
+    return {};
+  }
+}
+
+/** Renders a token summary for an error message, or "" when there is nothing to say. */
+export function formatTokenIdentity(summary: TokenIdentitySummary): string {
+  const parts: string[] = [];
+  if (summary.iss !== undefined) parts.push(`iss=${summary.iss}`);
+  if (summary.aud !== undefined) parts.push(`aud=${summary.aud}`);
+  return parts.length > 0 ? ` (token ${parts.join(" ")})` : "";
+}
 
 const defaultCaller: ConvexQueryCaller = async (deploymentUrl, authToken, path, args) => {
   const client = new ConvexHttpClient(deploymentUrl);

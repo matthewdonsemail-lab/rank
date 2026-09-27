@@ -25,6 +25,8 @@ const DEPLOYMENT_B = "https://bravo.convex.cloud";
 const realValidate = loginValidateDeps.validate;
 const realOpenBrowser = loginDeps.openBrowser;
 const realTimeoutMs = loginDeps.timeoutMs;
+const realStdoutIsTTY = loginDeps.stdoutIsTTY;
+const realCreateWaitIndicator = loginDeps.createWaitIndicator;
 const roots: string[] = [];
 
 function makeRoot(): string {
@@ -40,6 +42,8 @@ afterEach(() => {
   loginValidateDeps.validate = realValidate;
   loginDeps.openBrowser = realOpenBrowser;
   loginDeps.timeoutMs = realTimeoutMs;
+  loginDeps.stdoutIsTTY = realStdoutIsTTY;
+  loginDeps.createWaitIndicator = realCreateWaitIndicator;
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -369,6 +373,124 @@ describe("rank login (browser path)", () => {
     expect(result.code).toBe(1);
     expect(io.joined()).toContain("timed out");
     expect(readSessions(root)).toBeNull();
+  });
+
+  test("starts and settles the wait indicator exactly once on success", async () => {
+    const root = makeRoot();
+    const events: string[] = [];
+    let openedUrl: string | undefined;
+    loginDeps.openBrowser = (url) => {
+      openedUrl = url;
+      return { ok: true };
+    };
+    loginDeps.timeoutMs = 5_000;
+    loginDeps.createWaitIndicator = () => ({
+      start: (m) => events.push(`start:${m}`),
+      message: (m) => events.push(`message:${m}`),
+      succeed: (m) => events.push(`succeed:${m}`),
+      fail: (m) => events.push(`fail:${m}`),
+    });
+    okValidate();
+    const io = capture(root, { CONVEX_URL: DEPLOYMENT_A });
+
+    const promise = runLogin(io.context, []);
+    const authorize = new URL(await waitFor(() => openedUrl));
+    expect(events).toEqual(["start:Waiting for sign-in to complete…"]);
+    await fetch(authorize.searchParams.get("exchange") as string, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: "c0de",
+        state: authorize.searchParams.get("state"),
+        code_challenge: authorize.searchParams.get("code_challenge"),
+        token: "tok-ok",
+      }),
+    });
+
+    expect((await promise).code).toBe(0);
+    // Exactly one settle, and it is the success one: a second frame left
+    // running would keep redrawing over the final report.
+    expect(events.filter((e) => e.startsWith("succeed:") || e.startsWith("fail:"))).toEqual(["succeed:"]);
+  });
+
+  test("fails the wait indicator when the exchange is rejected", async () => {
+    const root = makeRoot();
+    const events: string[] = [];
+    loginDeps.openBrowser = () => ({ ok: true });
+    loginDeps.timeoutMs = 150;
+    loginDeps.createWaitIndicator = () => ({
+      start: (m) => events.push(`start:${m}`),
+      message: (m) => events.push(`message:${m}`),
+      succeed: (m) => events.push(`succeed:${m}`),
+      fail: (m) => events.push(`fail:${m}`),
+    });
+    const io = capture(root, { CONVEX_URL: DEPLOYMENT_A });
+
+    expect((await runLogin(io.context, [])).code).toBe(1);
+    expect(events).toEqual(["start:Waiting for sign-in to complete…", "fail:"]);
+  });
+
+  test("a rejected exchange names the token's iss and aud, never the token", async () => {
+    const encode = (value: unknown) => Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+    const token = `${encode({ alg: "RS256" })}.${encode({ iss: "https://other.clerk.accounts.dev/", aud: "other", sub: "user_x" })}.sig`;
+    const root = makeRoot();
+    let openedUrl: string | undefined;
+    loginDeps.openBrowser = (url) => {
+      openedUrl = url;
+      return { ok: true };
+    };
+    loginDeps.timeoutMs = 300;
+    loginValidateDeps.validate = async () => ({ ok: false, error: { kind: "auth", message: "rejected" } });
+    const io = capture(root, { CONVEX_URL: DEPLOYMENT_A });
+
+    const promise = runLogin(io.context, []);
+    const authorize = new URL(await waitFor(() => openedUrl));
+    const response = await fetch(authorize.searchParams.get("exchange") as string, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: "c0de",
+        state: authorize.searchParams.get("state"),
+        code_challenge: authorize.searchParams.get("code_challenge"),
+        token,
+      }),
+    });
+    expect(response.status).toBe(401);
+    const body = (await response.json()) as { ok: boolean; error: string };
+    expect(body.error).toContain("iss=https://other.clerk.accounts.dev/");
+    expect(body.error).toContain("aud=other");
+    expect(body.error).not.toContain("user_x");
+    expect(body.error).not.toContain(token);
+    // The rejection leaves the listener open, so the run only ends when the
+    // exchange window expires.
+    expect((await promise).code).toBe(1);
+  });
+
+  test("falls back to one static line when stdout is not a TTY", async () => {
+    const root = makeRoot();
+    loginDeps.openBrowser = () => ({ ok: true });
+    loginDeps.timeoutMs = 150;
+    loginDeps.stdoutIsTTY = () => false;
+    const io = capture(root, { CONVEX_URL: DEPLOYMENT_A });
+
+    await runLogin(io.context, []);
+    const waits = io.out.filter((l) => l.includes("Waiting for sign-in"));
+    expect(waits).toEqual(["Waiting for sign-in to complete…"]);
+  });
+
+  test("--json keeps the wait line out of the machine-readable report", async () => {
+    const root = makeRoot();
+    loginDeps.openBrowser = () => ({ ok: true });
+    loginDeps.timeoutMs = 150;
+    loginDeps.stdoutIsTTY = () => true;
+    const io = capture(root, { CONVEX_URL: DEPLOYMENT_A });
+
+    await runLogin(io.context, ["--json"]);
+    // Every non-empty stdout line has to parse: a spinner frame or a banner
+    // would make the whole report unparseable.
+    const parsed = io.out.filter((l) => l.trim() !== "").map((l) => JSON.parse(l) as { step?: string });
+    expect(parsed.length).toBeGreaterThan(0);
+    expect(io.out.join("\n")).not.toContain("Waiting for sign-in");
   });
 
   test("still waits when it cannot open a browser, and says how", async () => {

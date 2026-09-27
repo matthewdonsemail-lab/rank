@@ -31,3 +31,9 @@ export type ConvexQueryCaller = (
   path: string,
   args: Record<string, unknown>,
 ) => Promise<unknown>;
+
+/** The only JWT claims rank ever reads for diagnostics. */
+export interface TokenIdentitySummary {
+  iss?: string;
+  aud?: string;
+}

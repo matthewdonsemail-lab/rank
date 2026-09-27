@@ -1,6 +1,6 @@
 import { ConvexError } from "convex/values";
 import { describe, expect, test } from "bun:test";
-import { validateSessionToken, VALIDATION_PATH } from "./auth.ts";
+import { formatTokenIdentity, summarizeTokenIdentity, validateSessionToken, VALIDATION_PATH } from "./auth.ts";
 
 function okCaller(
   result: unknown,
@@ -119,5 +119,44 @@ describe("validateSessionToken", () => {
     });
     const text = JSON.stringify(result);
     expect(text).not.toContain("sekrit-token-value");
+  });
+});
+
+function fakeToken(payload: Record<string, unknown>): string {
+  const encode = (value: unknown) =>
+    Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+  return `${encode({ alg: "RS256", typ: "JWT" })}.${encode(payload)}.sig`;
+}
+
+describe("summarizeTokenIdentity", () => {
+  test("extracts only iss and aud, never the token or other claims", () => {
+    const token = fakeToken({
+      iss: "https://internal-piglet-2301.clerk.accounts.dev/",
+      aud: "convex",
+      sub: "user_abc",
+      exp: 9999999999,
+    });
+    expect(summarizeTokenIdentity(token)).toEqual({
+      iss: "https://internal-piglet-2301.clerk.accounts.dev/",
+      aud: "convex",
+    });
+    const rendered = formatTokenIdentity(summarizeTokenIdentity(token));
+    expect(rendered).toContain("iss=https://internal-piglet-2301.clerk.accounts.dev/");
+    expect(rendered).toContain("aud=convex");
+    expect(rendered).not.toContain("user_abc");
+    expect(rendered).not.toContain("sig");
+    expect(rendered).not.toContain("9999999999");
+    expect(summarizeTokenIdentity("bogus-but-shapeless")).toEqual({});
+    expect(formatTokenIdentity({})).toBe("");
+  });
+
+  test("supports an array audience and refuses to guess on garbage", () => {
+    expect(summarizeTokenIdentity(fakeToken({ iss: "https://x/", aud: ["convex", "extra"] }))).toEqual({
+      iss: "https://x/",
+      aud: "convex,extra",
+    });
+    expect(summarizeTokenIdentity("not-a-token")).toEqual({});
+    expect(summarizeTokenIdentity("a.b")).toEqual({});
+    expect(summarizeTokenIdentity("")).toEqual({});
   });
 });

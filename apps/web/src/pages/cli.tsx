@@ -193,9 +193,31 @@ export function CliLoginPage() {
     // getToken is deliberately not a dependency: useAuth hands back a fresh
     // reference each render, and depending on it re-ran this effect forever.
     // Reading it at call time always yields the current session.
+    //
+    // The `convex` JWT template is required. The default Clerk session token
+    // carries aud=<clerk-frontend-api-domain>, which matches none of the
+    // Convex providers (they all require app_id "convex") — every such token
+    // fails with NoAuthProvider regardless of which instance minted it. The
+    // template is created by activating the Convex integration in the Clerk
+    // dashboard; if it is absent Clerk throws, and that is surfaced instead
+    // of a token Convex could never accept.
     let cancelled = false;
-    void getToken().then((token) => {
+    const request = (async () => {
+      try {
+        return await getToken({ template: "convex" });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setResult({
+          kind: "error",
+          detail: `Could not mint a Convex session token: ${message}. The "convex" JWT template is missing in this Clerk instance — activate the Convex integration in the Clerk dashboard, then try again.`,
+          terminal: false,
+        });
+        return null;
+      }
+    })();
+    void request.then((token) => {
       if (cancelled) return;
+      if (token === null) return;
       if (!token) {
         setResult({
           kind: "error",

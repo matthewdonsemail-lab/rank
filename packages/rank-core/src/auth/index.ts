@@ -1,4 +1,4 @@
-export { validateSessionToken, VALIDATION_PATH } from "./auth.ts";
+export { formatTokenIdentity, summarizeTokenIdentity, validateSessionToken, VALIDATION_PATH } from "./auth.ts";
 export { removeEnvLine, upsertEnvLine } from "./env-file.ts";
 export {
   BASE64URL_RE,
@@ -12,6 +12,7 @@ export type {
   AuthError,
   AuthErrorKind,
   ConvexQueryCaller,
+  TokenIdentitySummary,
   ValidateSessionOptions,
   ValidateSessionResult,
 } from "./types.ts";
