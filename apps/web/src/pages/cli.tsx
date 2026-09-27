@@ -215,9 +215,20 @@ export function CliLoginPage() {
     };
   }, [isLoaded, isSignedIn, pending, postExchange, attempt]);
 
-  const handleSignIn = useCallback(() => {
+  // Gate: this path only means something when a `rank login` run opened it with  // an access code. Entered any other way — bookmarked, shared, or with the
+  // query stripped — there is nothing to authorize, so the visitor is sent back
+  // to the auth routes instead of being parked on a dead end. The buttons below
+  // are the manual equivalent, for when the automatic hop is blocked.
+  const hasAccessCode = pending !== null;
+
+  const goToSignUp = useCallback(() => {
+    window.location.assign(`/sign-up?redirectUrl=${encodeURIComponent(returnTarget)}`);
+  }, [returnTarget]);
+
+  useEffect(() => {
+    if (!isLoaded || hasAccessCode) return;
     goToSignIn();
-  }, [goToSignIn]);
+  }, [isLoaded, hasAccessCode, goToSignIn]);
 
   if (!isLoaded) return <OnboardingAuthLoading>Loading sign-in…</OnboardingAuthLoading>;
 
@@ -230,16 +241,26 @@ export function CliLoginPage() {
       </p>
 
       <div className="mt-4">
-        {!isSignedIn ? (
-          <button type="button" onClick={handleSignIn} className={splitControl.primary}>
+        {!hasAccessCode ? (
+          <>
+            <SplitNotice tone="info" title="No access code">
+              This page was opened without a <code className={splitControl.code}>rank login</code> code, so there is
+              nothing to authorize yet. Sign in below, then run{" "}
+              <code className={splitControl.code}>rank login</code> in your terminal and open the URL it prints.
+            </SplitNotice>
+            <div className="mt-4 grid gap-3">
+              <button type="button" onClick={goToSignIn} className={splitControl.primary}>
+                Sign in
+              </button>
+              <button type="button" onClick={goToSignUp} className={splitControl.secondary}>
+                Create an account
+              </button>
+            </div>
+          </>
+        ) : !isSignedIn ? (
+          <button type="button" onClick={goToSignIn} className={splitControl.primary}>
             Sign in to continue
           </button>
-        ) : !pending ? (
-          <SplitNotice tone="info" title="Nothing to authorize">
-            You are signed in, but this page has no pending{" "}
-            <code className={splitControl.code}>rank login</code> request. Run{" "}
-            <code className={splitControl.code}>rank login</code> in your terminal and open the full URL it prints.
-          </SplitNotice>
         ) : (
           <div role="status" aria-live="polite">
             {result.kind === "idle" && <SplitNotice tone="info">Preparing the local exchange…</SplitNotice>}

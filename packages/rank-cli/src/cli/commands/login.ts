@@ -50,7 +50,11 @@ export const LOGOUT_USAGE = "Usage: rank logout [--deployment <url>] [--json]";
 export const WHOAMI_USAGE = "Usage: rank whoami [--deployment <url>] [--json]";
 
 const ENV_VAR_NAME = "RANK_AUTH_TOKEN";
-const DEFAULT_WEB_URL = "https://rank-web-gray.vercel.app";
+// Canonical production origin. `rank.listeningkit.com` is the real domain and
+// the only one whose Clerk redirect URIs are meant to be registered; the
+// rank-web-gray.vercel.app alias remains reachable for existing sessions.
+// Overridable per run with --web-url, RANK_WEB_URL, or .rank/config.json.
+const DEFAULT_WEB_URL = "https://rank.listeningkit.com";
 // A rejected token is answered 401 with the listener still open, and the fix
 // is for the visitor to sign in again — so the window has to outlast a Clerk
 // round trip, not just a single page load.
