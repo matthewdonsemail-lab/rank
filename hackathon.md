@@ -15,6 +15,12 @@
 
 ## Log
 
+### 2026-09-27 - Post-sign-in returns to the sending page so rank login completes — matthewdonsemail-lab
+- Beads: n/a
+- Commit: 05710aca7e2ed3a68de9e89172e74e543dcfd148 (2026-09-27 09:46:53 +0700)
+- Files: apps/web/src/pages/auth.tsx
+- `useSignedOutGate` hardcoded `/` as the destination, so the moment sign-in completed the visitor was pushed to the base page before Clerk's forceRedirectUrl could fire, and the /cli exchange died there without its access code. The gate now navigates to the same same-origin `?redirectUrl=` the form already used, falling back to `/` only for direct visits. First real end-to-end `rank login` completed against this flow (token stored for perceptive-cow-413).
+
 ### 2026-09-27 - Repaired the `rank login` browser exchange end to end and moved the app onto rank.listeningkit.com — matthewdonsemail-lab
 - Beads: n/a
 - Commit: uncommitted
