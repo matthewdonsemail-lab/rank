@@ -208,4 +208,32 @@
   .text-scrambler {
     font-size: clamp(2.35rem, 11vw, 4.5rem);
   }
+
+  /*
+   * Phones cannot fit "Build links and rank" on a single line at this size.
+   * 11vw gives a 375px screen about 41px of type, and that line is roughly
+   * 11.5em of advance — around 480px against the 343px the layout allows. It
+   * would need about 29px to fit, which is too small to be a headline, so the
+   * lines are allowed to wrap and the headline runs to three on a phone.
+   *
+   * .hero-shell keeps its overflow-x: clip regardless: that is what stops a
+   * scrambling letter's 1.18x scale and 0.1em ring from widening the document
+   * and re-laying out the header, and with the text wrapping there is nothing
+   * at rest for it to cut.
+   */
+  .text-scrambler__line {
+    white-space: normal;
+  }
+
+  /*
+   * The authored break goes with the wrap, because text-wrap: balance is
+   * ignored on a block that contains a forced break, and a greedy break inside
+   * the first line strands a word on its own. Dropping it lets the whole
+   * headline balance as one run of text — and where balance is unsupported the
+   * greedy fallback still breaks between words with no orphan, because "rank"
+   * is no longer pinned to a line of its own.
+   */
+  .text-scrambler__break {
+    display: none;
+  }
 }

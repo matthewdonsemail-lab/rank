@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ClayRoomSection } from "./landing/ClayRoomSection";
 import { Header, type HeaderItem } from "./landing/Header";
 import { Hero } from "./landing/hero";
 import { MessagingPlatform } from "./landing/MessagingPlatform";
@@ -34,6 +35,7 @@ function Landing({ authEnabled, isSignedIn }: Required<Pick<AppProps, "authEnabl
         accountItems={accountItems}
       />
       <Hero />
+      <ClayRoomSection />
       <div className="rounded-sm bg-[#f8f8f8] p-8">
         <div className="rounded-sm bg-yellow-200 p-6">
           <MessagingPlatform />

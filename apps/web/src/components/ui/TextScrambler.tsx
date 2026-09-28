@@ -15,6 +15,51 @@ const SCRAMBLE_COLORS = [
   "rgb(125, 168, 56)",
 ];
 
+/**
+ * Debug trace for the scrambler's internal API and the DOM state it drives.
+ * Flip to false to silence it.
+ *
+ * `api:` is what the chain calls in, `state:` is what the component then applies,
+ * `audit:` is whether the committed DOM agrees with it. Those three are separate
+ * on purpose: every bug worth catching here is a disagreement between them, and
+ * a single log showing only the intent would look healthy in all three failure
+ * modes.
+ */
+const TRACE_SCRAMBLER = true;
+
+function traceScrambler(label: string, detail: Record<string, unknown>): void {
+  if (!TRACE_SCRAMBLER) return;
+  console.log(`[scrambler] ${label}`, detail);
+}
+
+/**
+ * An override set as a compact position list, e.g. `12 chars [0-4, 16-19]`.
+ *
+ * Positions rather than the values, because the values are random per letter and
+ * would differ on every call, making two runs impossible to compare. The whole
+ * point is to see which slots flipped, and contiguity matters more than identity:
+ * a chain pull is meant to fill whole words, so a ragged set is the signal.
+ */
+function traceOverrides(overrides: Record<number, CharacterOverride>): string {
+  const positions = Object.keys(overrides).map(Number).sort((a, b) => a - b);
+  if (positions.length === 0) return "none";
+  const ranges: string[] = [];
+  let start = positions[0];
+  for (let index = 1; index < positions.length; index += 1) {
+    if (positions[index] === positions[index - 1] + 1) continue;
+    ranges.push(start === positions[index - 1] ? `${start}` : `${start}-${positions[index - 1]}`);
+    start = positions[index];
+  }
+  const last = positions[positions.length - 1];
+  ranges.push(start === last ? `${start}` : `${start}-${last}`);
+  return `${positions.length} chars [${ranges.join(", ")}]`;
+}
+
+/** The source text a position range covers, for readable traces. */
+function sliceRange(source: string, start: number, end: number): string {
+  return Array.from(source).slice(start, end).join("");
+}
+
 interface CharacterOverride {
   value: string;
   color: string;
@@ -119,6 +164,7 @@ function TextScramblerInner(
   const overridesRef = useRef<Record<number, CharacterOverride>>({});
   const closestPositionRef = useRef<number | null>(null);
   const exitTimeoutRef = useRef<number | null>(null);
+  const hoverTraceRef = useRef<string | null>(null);
   const [overrides, setOverrides] = useState<Record<number, CharacterOverride>>({});
   const plainText = text.replace(/\n/g, " ");
   const highlightStart = text.indexOf(HIGHLIGHT_WORD);
@@ -174,12 +220,31 @@ function TextScramblerInner(
     closestPositionRef.current = closestPosition;
     overridesRef.current = nextOverrides;
     setOverrides(nextOverrides);
+    // Fires on every pointer move, so only logged when the affected set actually
+    // changes — otherwise a slow drag buries everything else in the console.
+    const signature = traceOverrides(nextOverrides);
+    if (signature !== hoverTraceRef.current) {
+      hoverTraceRef.current = signature;
+      traceScrambler("hover:update", {
+        pointer: `${Math.round(event.clientX)}, ${Math.round(event.clientY)}`,
+        radius,
+        maxCharacters,
+        inRange: nearestCharacters.length,
+        closest: closestPosition,
+        overrides: signature,
+      });
+    }
   };
 
   const reset = () => {
     cancelExit();
     closestPositionRef.current = null;
+    hoverTraceRef.current = null;
     const positions = Object.keys(overridesRef.current).map(Number);
+    traceScrambler("hover:leave", {
+      releasing: positions.length,
+      overrides: traceOverrides(overridesRef.current),
+    });
 
     if (positions.length === 0) {
       overridesRef.current = {};
@@ -249,7 +314,67 @@ function TextScramblerInner(
   const applyOverrides = (next: Record<number, CharacterOverride>) => {
     overridesRef.current = next;
     setOverrides(next);
+    traceScrambler("state:applyOverrides", {
+      overrides: traceOverrides(next),
+      refIsSameObject: overridesRef.current === next,
+    });
   };
+
+  /**
+   * Audits the committed DOM against the state that was requested, after the
+   * commit rather than at apply time — React state is async, so auditing inside
+   * applyOverrides would read the previous render's attributes and report every
+   * letter as mismatched.
+   *
+   * `data-char` lives on the outer span React owns, so it is the committed truth
+   * and a disagreement here is a real bug. The torph span is counted separately
+   * because it animates: a lag there is expected mid-morph and only means
+   * something if it fails to settle.
+   */
+  useEffect(() => {
+    if (!TRACE_SCRAMBLER) return;
+    const mismatched: string[] = [];
+    let torphBehind = 0;
+    characterRefs.current.forEach((element, position) => {
+      const override = overrides[position];
+      if (!override) return;
+      const shown = element.getAttribute("data-char");
+      if (shown !== override.value) {
+        mismatched.push(`${position} dom="${shown}" api="${override.value}"`);
+        return;
+      }
+      const inner = element.querySelector(".text-scrambler__character-inner");
+      if (inner !== null && inner.textContent !== override.value) torphBehind += 1;
+    });
+    const orphans = Object.keys(overrides)
+      .map(Number)
+      .filter((position) => !characterRefs.current.has(position));
+    traceScrambler("audit:dom-sync", {
+      overrides: traceOverrides(overrides),
+      trackedCharacters: characterRefs.current.size,
+      scrambledCharacters: Object.keys(overrides).length,
+      mismatched,
+      overridesWithNoElement: orphans,
+      torphStillAnimating: torphBehind,
+      ok: mismatched.length === 0 && orphans.length === 0,
+    });
+  }, [overrides]);
+
+  /**
+   * The position space the chain addresses, logged once per text. Every scramble
+   * is expressed in these indices, so if it does not line up with the render the
+   * wrong letters flip while every internal counter still reads correct.
+   */
+  useEffect(() => {
+    const ranges = getWordRanges(text);
+    traceScrambler("api:word-ranges", {
+      text: JSON.stringify(text),
+      characters: getCharacterPositions(text).length,
+      words: ranges.map(
+        (range) => `${range.start}-${range.end} "${sliceRange(text, range.start, range.end)}"`,
+      ),
+    });
+  }, [text]);
 
   useImperativeHandle(
     ref,
@@ -257,12 +382,20 @@ function TextScramblerInner(
       scrambleProgress(progress: number) {
         cancelExit();
         const clamped = Math.min(1, Math.max(0, progress));
+        traceScrambler("api:scrambleProgress", {
+          received: Number(progress.toFixed(3)),
+          clamped: Number(clamped.toFixed(3)),
+          latchedFull: latchedFullRef.current,
+          wasFull: wasFullRef.current,
+          flashing: flashingRef.current,
+        });
 
         // A flash in flight owns the state. Progress updates stand down rather
         // than rebuilding underneath it, unless the pull has collapsed — which
         // means the chain was released mid-flash and the stagger must take over.
         if (flashingRef.current) {
           if (clamped < FULL_RELEASE) {
+            traceScrambler("api:flash-interrupted", { clamped: Number(clamped.toFixed(3)) });
             clearChainTimers();
             flashingRef.current = false;
             latchedFullRef.current = false;
@@ -270,18 +403,23 @@ function TextScramblerInner(
           } else {
             latchedFullRef.current = true;
             wasFullRef.current = true;
+            traceScrambler("api:IGNORED-during-flash", { clamped: Number(clamped.toFixed(3)) });
             return;
           }
         }
 
         // Latched full rides out oscillation at the top without rebuilding.
-        if (latchedFullRef.current && clamped > FULL_RELEASE) return;
+        if (latchedFullRef.current && clamped > FULL_RELEASE) {
+          traceScrambler("api:IGNORED-latched-full", { clamped: Number(clamped.toFixed(3)) });
+          return;
+        }
         if (clamped < FULL_RELEASE) latchedFullRef.current = false;
 
         const words = getWordRanges(text);
         const count = Math.round(clamped * words.length);
         const next: Record<number, CharacterOverride> = {};
-        words.slice(0, count).forEach(({ start, end }) => {
+        const requested = words.slice(0, count);
+        requested.forEach(({ start, end }) => {
           for (let position = start; position < end; position++) {
             next[position] =
               overridesRef.current[position] ?? {
@@ -289,6 +427,13 @@ function TextScramblerInner(
                 color: getRandomScrambleColor(),
               };
           }
+        });
+        traceScrambler("api:resolved", {
+          clamped: Number(clamped.toFixed(3)),
+          wordCount: words.length,
+          wordsRequested: count,
+          words: requested.map((range) => sliceRange(text, range.start, range.end)),
+          resolved: traceOverrides(next),
         });
         applyOverrides(next);
 
@@ -309,12 +454,24 @@ function TextScramblerInner(
           const guarded = (fn: () => void, delay: number, last = false) => {
             chainTimersRef.current.push(
               window.setTimeout(() => {
-                if (flashTokenRef.current !== token) return;
+                const valid = flashTokenRef.current === token;
+                traceScrambler("api:flash-step", {
+                  token,
+                  valid,
+                  last,
+                  queuedTimers: chainTimersRef.current.length,
+                });
+                if (!valid) return;
                 fn();
                 if (last) flashingRef.current = false;
               }, delay),
             );
           };
+          traceScrambler("api:flash-start", {
+            token,
+            step,
+            all: traceOverrides(all),
+          });
           guarded(() => applyOverrides({ ...all }), 0);
           guarded(() => applyOverrides({}), step);
           guarded(() => applyOverrides({ ...all }), step * 2, true);
@@ -329,6 +486,11 @@ function TextScramblerInner(
         latchedFullRef.current = false;
         flashingRef.current = false;
         const words = getWordRanges(text);
+        traceScrambler("api:clearScramble", {
+          wordCount: words.length,
+          dissolveOrder: words.map((range) => sliceRange(text, range.start, range.end)),
+          overridesBefore: traceOverrides(overridesRef.current),
+        });
         if (words.length === 0) {
           applyOverrides({});
           return;
@@ -351,7 +513,14 @@ function TextScramblerInner(
                   changed = true;
                 }
               }
-              if (changed) applyOverrides(next);
+              if (changed) {
+                traceScrambler("api:dissolve-step", {
+                  sequence,
+                  word: sliceRange(text, start, end),
+                  remaining: traceOverrides(next),
+                });
+                applyOverrides(next);
+              }
             }, (sequence + 1) * step),
           );
         });
@@ -381,7 +550,21 @@ function TextScramblerInner(
 
         return (
           <Fragment key={`line-${lineIndex}`}>
-            {lineIndex > 0 ? <br data-astro-cid-wbltqw2m="" aria-hidden="true" /> : null}
+            {lineIndex > 0 ? (
+              <>
+                <br
+                  className="text-scrambler__break"
+                  data-astro-cid-wbltqw2m=""
+                  aria-hidden="true"
+                />
+                {/* The break is dropped on phones so the headline can wrap and
+                    balance, which leaves nothing between the two lines but this
+                    space. It is whitespace immediately after a forced break when
+                    the break is shown, so it collapses away and the desktop line
+                    start is unaffected. */}
+                {" "}
+              </>
+            ) : null}
             <span className="text-scrambler__line" aria-hidden="true">
               {line.split(/(\s+)/).map((token, tokenIndex) => {
                 const currentTokenOffset = tokenOffset;

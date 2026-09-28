@@ -4,6 +4,48 @@ import { Effect, EffectComposer, EffectPass } from "postprocessing";
 import * as THREE from "three";
 
 /**
+ * The Bayer threshold for a position in the 4x4 matrix, normalised to 1/17 to
+ * 16/17.
+ *
+ * Shared rather than inlined, because the same matrix is also compiled into
+ * materials that draw their own dither rather than going through this pass — see
+ * `ClayDither`. One matrix, one definition, so the two cannot drift apart and
+ * produce two different patterns at the same cell size.
+ *
+ * The matrix is unrolled into branches rather than indexed. GLSL ES 1.0 has no
+ * dynamic array indexing, and this runs once per screen pixel.
+ */
+export const BAYER_GLSL = /* glsl */ `
+float clayBayerValue(vec2 pos, float cellSize) {
+  vec2 cell = floor(mod(pos / cellSize, 4.0));
+  int x = int(cell.x);
+  int y = int(cell.y);
+
+  if (x == 0) {
+    if (y == 0) return 16.0 / 17.0;
+    if (y == 1) return 5.0 / 17.0;
+    if (y == 2) return 13.0 / 17.0;
+    return 1.0 / 17.0;
+  } else if (x == 1) {
+    if (y == 0) return 8.0 / 17.0;
+    if (y == 1) return 12.0 / 17.0;
+    if (y == 2) return 4.0 / 17.0;
+    return 9.0 / 17.0;
+  } else if (x == 2) {
+    if (y == 0) return 14.0 / 17.0;
+    if (y == 1) return 2.0 / 17.0;
+    if (y == 2) return 15.0 / 17.0;
+    return 3.0 / 17.0;
+  } else {
+    if (y == 0) return 6.0 / 17.0;
+    if (y == 1) return 10.0 / 17.0;
+    if (y == 2) return 7.0 / 17.0;
+    return 11.0 / 17.0;
+  }
+}
+`;
+
+/**
  * Ordered (Bayer) dithering, as a post-processing pass.
  *
  * Adapted from https://github.com/niccolofanton/dithering-shader (MIT), whose
@@ -37,8 +79,13 @@ import * as THREE from "three";
  * range across the matrix, which is what turns "one shade" back into a
  * gradient. Without them the effect can only ever show the tonal range that
  * happens to line up with the thresholds.
+ *
+ * This pass dithers the whole frame, so it suits a subject that fills its
+ * canvas. A single object inside a larger scene wants the dither in its own
+ * material instead, which is what `ClayDither` is for.
  */
 const ditheringFragmentShader = /* glsl */ `
+${BAYER_GLSL}
 /**
  * Edge-detect stride, in device pixels.
  *
@@ -90,41 +137,6 @@ uniform float ditherSteps;
 uniform float outlineDitherSize;
 
 /**
- * The Bayer threshold for this pixel's position in the 4x4 matrix, normalised to
- * 1/17 to 16/17.
- *
- * The matrix is unrolled into branches rather than indexed. GLSL ES 1.0 has no
- * dynamic array indexing, and this runs once per screen pixel.
- */
-float bayerValue(vec2 pos, float cellSize) {
-  vec2 cell = floor(mod(pos / cellSize, 4.0));
-  int x = int(cell.x);
-  int y = int(cell.y);
-
-  if (x == 0) {
-    if (y == 0) return 16.0 / 17.0;
-    if (y == 1) return 5.0 / 17.0;
-    if (y == 2) return 13.0 / 17.0;
-    return 1.0 / 17.0;
-  } else if (x == 1) {
-    if (y == 0) return 8.0 / 17.0;
-    if (y == 1) return 12.0 / 17.0;
-    if (y == 2) return 4.0 / 17.0;
-    return 9.0 / 17.0;
-  } else if (x == 2) {
-    if (y == 0) return 14.0 / 17.0;
-    if (y == 1) return 2.0 / 17.0;
-    if (y == 2) return 15.0 / 17.0;
-    return 3.0 / 17.0;
-  } else {
-    if (y == 0) return 6.0 / 17.0;
-    if (y == 1) return 10.0 / 17.0;
-    if (y == 2) return 7.0 / 17.0;
-    return 11.0 / 17.0;
-  }
-}
-
-/**
  * Whether the pixel survives the dither, as a comparison of brightness against
  * the Bayer threshold for its position.
  *
@@ -134,7 +146,7 @@ float bayerValue(vec2 pos, float cellSize) {
  * answer without branching.
  */
 bool survives(float brightness, vec2 pos) {
-  return brightness < bayerValue(pos, gridSize);
+  return brightness < clayBayerValue(pos, gridSize);
 }
 
 /**
@@ -241,7 +253,7 @@ float steppedCoverage(float coverage, vec2 pos, float cellSize) {
   float remainder = scaled - level;
   // Ordered dither: this cell takes the next level only if the Bayer threshold
   // for its position falls below how far the coverage is between the two.
-  return clamp((level + step(bayerValue(pos, cellSize), remainder)) / levels, 0.0, 1.0);
+  return clamp((level + step(clayBayerValue(pos, cellSize), remainder)) / levels, 0.0, 1.0);
 }
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
@@ -805,9 +817,11 @@ export function DitheringPass({
     // re-attached, so the hero comes back without a reload.
     const canvas = gl.domElement;
     const onContextLost = (event: Event) => {
+      console.warn("[dithering] webglcontextlost", { size, devicePixelRatio: gl.getPixelRatio() });
       event.preventDefault();
     };
     const onContextRestored = () => {
+      console.warn("[dithering] webglcontextrestored", { size, devicePixelRatio: gl.getPixelRatio() });
       composer.reset();
       attachPass();
     };
@@ -875,6 +889,10 @@ export function DitheringPass({
   }, [gl]);
 
   useEffect(() => {
+    console.log("[dithering] composer resize", {
+      css: `${size.width}x${size.height}`,
+      devicePixelRatio: gl.getPixelRatio(),
+    });
     // The composer sizes its buffers from the renderer's drawing buffer, so the
     // device pixel ratio is picked up from the renderer rather than set here.
     // updateStyle is false because React Three Fiber owns the canvas element's

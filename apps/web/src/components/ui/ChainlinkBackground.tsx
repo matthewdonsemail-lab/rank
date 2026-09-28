@@ -1,8 +1,9 @@
-import { Suspense, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { DitheringPass } from "./DitheringPass";
+import { applyClayDither } from "./ClayDither";
 
 /**
  * Chainlink background for the hero.
@@ -400,7 +401,13 @@ function linkBeads(links: LinkBody[], index: number, ringRadius: number, anchorA
  * a full-diameter exclusion would fight the thread itself; half a diameter only
  * resists deep penetration, which is the phasing rather than the threading.
  */
-function collideBeads(links: LinkBody[], ringRadius: number, tubeRadius: number, anchorAngle: number) {
+function collideBeads(
+  links: LinkBody[],
+  ringRadius: number,
+  tubeRadius: number,
+  anchorAngle: number,
+  tailPinned: boolean,
+) {
   const minDistance = tubeRadius * 2;
   const adjacentMinDistance = tubeRadius;
   for (let i = 0; i < links.length; i++) {
@@ -414,8 +421,9 @@ function collideBeads(links: LinkBody[], ringRadius: number, tubeRadius: number,
           const distance = scratchDelta.length();
           if (distance >= limit || distance < 1e-9) continue;
           const correction = ((limit - distance) / distance) * 0.5;
-          const aPinned = i === 0;
-          const bPinned = j === 0;
+          const last = links.length - 1;
+          const aPinned = i === 0 || (tailPinned && i === last);
+          const bPinned = j === 0 || (tailPinned && j === last);
           if (!aPinned && !bPinned) {
             links[i].position.addScaledVector(scratchDelta, -correction * 0.5);
             links[j].position.addScaledVector(scratchDelta, correction * 0.5);
@@ -498,7 +506,7 @@ const MAX_STRETCH = 1.35;
  * wrapper tracks the pointer itself and the simulation reads it, rather than
  * relying on R3F's own pointer state.
  */
-interface PointerState {
+export interface PointerState {
   /** Normalised device coordinates, -1 to 1. */
   x: number;
   y: number;
@@ -513,8 +521,27 @@ interface PointerState {
   deltaY: number;
 }
 
-function createPointerState(): PointerState {
+export function createPointerState(): PointerState {
   return { x: 0, y: 0, lastX: 0, lastY: 0, down: false, grabbed: -1, deltaX: 0, deltaY: 0 };
+}
+
+/**
+ * Debug trace for the whole pointer pipeline. Flip to false to silence it.
+ *
+ * `dom:` lines are the browser's own events, exactly as they arrive, tagged with
+ * the internal state they mutated. `sim:` lines are the per-frame reads of that
+ * state, so the two prefixes read as the handover from DOM to physics.
+ */
+const TRACE_POINTER = false;
+
+function tracePointer(label: string, detail: Record<string, unknown>): void {
+  if (!TRACE_POINTER) return;
+  console.log(`[chainlink] ${label}`, detail);
+}
+
+/** A vector as a short readable string rather than a console object dump. */
+function traceVector(vector: THREE.Vector3): string {
+  return `${vector.x.toFixed(2)}, ${vector.y.toFixed(2)}, ${vector.z.toFixed(2)}`;
 }
 
 /**
@@ -628,7 +655,16 @@ function useChainRig(modelUrl: string, color: string, opacity: number, linkCount
     const tubeRadius = thickness / 2;
 
     const rest = outer * PITCH_RATIO;
-    return { links, rest, length: rest * Math.max(links.length - 1, 1), outer, ringRadius, tubeRadius };
+    const length = rest * Math.max(links.length - 1, 1);
+    tracePointer("sim:rig-built", {
+      linkCount: links.length,
+      outer: Number(outer.toFixed(3)),
+      rest: Number(rest.toFixed(3)),
+      length: Number(length.toFixed(3)),
+      ringRadius: Number(ringRadius.toFixed(3)),
+      tubeRadius: Number(tubeRadius.toFixed(3)),
+    });
+    return { links, rest, length, outer, ringRadius, tubeRadius };
   }, [scene, color, opacity, linkCount]);
 }
 
@@ -645,7 +681,28 @@ interface ChainRig {
   tubeRadius: number;
 }
 
-function Chain({
+/** Live measurements of a chain copy, for anything tethered to it. */
+export interface TetherMetrics {
+  /** Anchor position in world units, refreshed every frame. */
+  anchorWorld: THREE.Vector3;
+  /** Anchor-to-tail reach in world units at rest length. */
+  reachWorld: number;
+  /** Tail link position in world units, refreshed every frame. */
+  tailWorld: THREE.Vector3;
+  /** Yellow clasp position in world units, refreshed every frame. */
+  knobWorld: THREE.Vector3;
+  /** Deepest body contact normal (surface to link), world units. */
+  contactNormal: THREE.Vector3;
+  /** Deepest body contact depth, world units. Zero when clear. */
+  contactDepth: number;
+}
+
+const scratchPin = new THREE.Vector3();
+const scratchClamp = new THREE.Vector3();
+const scratchSeg = new THREE.Vector3();
+const scratchClosest = new THREE.Vector3();
+
+export function Chain({
   modelUrl,
   color,
   scale,
@@ -656,6 +713,16 @@ function Chain({
   groupRef,
   onPullRef,
   lastPullRef,
+  anchorOverride,
+  tailPinWorld,
+  trackPointer,
+  dithered,
+  shadows,
+  confineWorld,
+  avoidCapsule,
+  beadIterations,
+  metricsRef,
+  tailKnobColor,
 }: {
   modelUrl: string;
   color: string;
@@ -669,11 +736,162 @@ function Chain({
   onPullRef: React.MutableRefObject<((progress: number) => void) | undefined>;
   /** Last reported progress, so the callback only fires when it moves. */
   lastPullRef: React.MutableRefObject<number>;
+  /**
+   * Explicit anchor in the rig's local units, replacing the viewport-derived
+   * one. For mounting a copy of the chain inside another scene (e.g. pinned
+   * to the middle of a room instead of the top of a hero).
+   */
+  anchorOverride?: [number, number, number];
+  /**
+   * World-space pin for the tail link, re-applied every frame after the
+   * solve. Lets the tail hang onto a moving object — like a phone — while the
+   * middle links take the yank.
+   */
+  tailPinWorld?: React.MutableRefObject<THREE.Vector3 | null>;
+  /**
+   * Track the pointer from this canvas's own element. The hero wrapper feeds
+   * pointer state from its div; a copy embedded in another canvas has no such
+   * wrapper, so it listens itself.
+   */
+  trackPointer?: boolean;
+  /**
+   * Match the hero's halftone styling on this copy's own material.
+   *
+   * The hero's look comes from a full-canvas post pass, which cannot be
+   * reused inside another scene — so the same two blues are compiled into the
+   * links' material instead, resolved per pixel like the handsets'.
+   */
+  dithered?: boolean;
+  /** Let the links cast onto whatever surrounds them. Off in the hero (nothing to catch it). */
+  shadows?: boolean;
+  /**
+   * World-space box the links are confined to, applied after the solve.
+   * No max-Z: set it to Infinity and the mouth stays open, so a tether can
+   * run out of the room while never crossing a wall, the floor, the ceiling
+   * or the back. The pinned anchor and tail are exempt by placement (anchor
+   * is restored separately, the tail pin runs after).
+   */
+  confineWorld?: { min: THREE.Vector3; max: THREE.Vector3 } | null;
+  /**
+   * A no-go capsule the free links are kept out of — e.g. the phone body the
+   * tail is chained to, so middle links rest on its surface instead of phasing
+   * through it. A tall thin body needs a segment, not a sphere: a ball big
+   * enough to cover the height floats links off the surface, and a small one
+   * lets tubes clip the top and bottom. The tail link itself is exempt (the
+   * pin places it after).
+   */
+  avoidCapsule?: React.MutableRefObject<{
+    bottom: THREE.Vector3;
+    top: THREE.Vector3;
+    radius: number;
+  } | null>;
+  /**
+   * A solid ball the free links rest on — e.g. the red ball the tail's clasp
+   * sits against. The tail link itself is exempt (the pin places it after).
+   */
+  avoidBall?: React.MutableRefObject<{ center: THREE.Vector3; radius: number } | null>;
+  /** Relaxation passes for bead collision. Defaults to BEAD_ITERATIONS. */
+  beadIterations?: number;
+  /** Filled every frame with the anchor position and rest reach, world units. */
+  metricsRef?: React.MutableRefObject<TetherMetrics | null>;
+  /**
+   * A yellow clasp ball on the tail link: a child of the last link's mesh at
+   * its centre, fattened to the tube, so it rides the link and stays sunk in
+   * whatever the tail is chained to.
+   */
+  tailKnobColor?: string;
 }) {
   const { width, height } = useThree((state) => state.viewport);
   const rig = useChainRig(modelUrl, color, opacity, linkCount);
   const initialised = useRef(false);
   const anchorAngleRef = useRef(0);
+  const tailPinLocalRef = useRef(new THREE.Vector3());
+  const tailPinLiveRef = useRef(false);
+  const metricsAnchorRef = useRef(new THREE.Vector3());
+  const contactNormalRef = useRef(new THREE.Vector3(0, 0, 1));
+  const contactDepthRef = useRef(0);
+  const knobRef = useRef<THREE.Mesh | null>(null);
+  const knobPrevRef = useRef(new THREE.Vector3());
+  const knobInitRef = useRef(false);
+  const lastThrowRef = useRef(0);
+  const traceClockRef = useRef(0);
+  const rigRef = useRef<ChainRig | null>(null);
+  const coveringRef = useRef("");
+  const gl = useThree((state) => state.gl);
+
+  // Tail clasp: a yellow ball riding the last link's centre, fattened to the
+  // tube so it stays sunk in whatever the tail is chained to.
+  useEffect(() => {
+    if (!tailKnobColor) return undefined;
+    const tail = rig.links[rig.links.length - 1];
+    if (!tail) return undefined;
+    const knob = new THREE.Mesh(
+      new THREE.SphereGeometry(rig.tubeRadius * 1.3, 20, 14),
+      new THREE.MeshStandardMaterial({ color: tailKnobColor, roughness: 0.5, metalness: 0 }),
+    );
+    knob.castShadow = true;
+    // Ball-side edge of the ring, never the centre: local -Y maps down-chain
+    // toward whatever the tail is chained to, twist-proof.
+    knob.position.set(0, -rig.ringRadius, 0);
+    tail.mesh.add(knob);
+    knobRef.current = knob;
+    knobInitRef.current = false;
+    return () => {
+      if (knobRef.current === knob) knobRef.current = null;
+      tail.mesh.remove(knob);
+      knob.geometry.dispose();
+      (knob.material as THREE.Material).dispose();
+    };
+  }, [rig, tailKnobColor]);
+
+  // Per-copy finish: halftone styling and shadow casting on this rig's own
+  // shared material. Idempotent — the patcher no-ops on a second call.
+  useEffect(() => {
+    for (const link of rig.links) {
+      if (shadows) {
+        link.mesh.castShadow = true;
+        link.mesh.receiveShadow = true;
+      }
+      if (dithered) {
+        applyClayDither(link.mesh.material as THREE.Material, {
+          solidColor: "#2A8CFF",
+          shadeColor: "#154680",
+          cellSize: 4,
+          blackPoint: 0.32,
+          whitePoint: 1,
+        });
+      }
+    }
+  }, [rig, dithered, shadows]);
+  // Own pointer tracking for embedded copies with no wrapper div feeding them.
+  useEffect(() => {
+    if (!trackPointer) return;
+    const element = gl.domElement;
+    const update = (event: PointerEvent) => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+    };
+    const down = (event: PointerEvent) => {
+      update(event);
+      pointer.down = true;
+    };
+    const up = () => {
+      pointer.down = false;
+      pointer.grabbed = -1;
+    };
+    element.addEventListener("pointermove", update);
+    element.addEventListener("pointerdown", down);
+    element.addEventListener("pointerup", up);
+    element.addEventListener("pointercancel", up);
+    return () => {
+      element.removeEventListener("pointermove", update);
+      element.removeEventListener("pointerdown", down);
+      element.removeEventListener("pointerup", up);
+      element.removeEventListener("pointercancel", up);
+    };
+  }, [gl, trackPointer, pointer]);
 
   // Fit the whole chain to the viewport height, so link spacing stays correct
   // whatever the link count. Fitting one link instead would grow a long chain
@@ -684,16 +902,34 @@ function Chain({
   }, [height, rig.length, scale]);
 
   const localRest = rig.rest;
-  const anchorX = ((ANCHOR_X_RATIO * width) / 2 + offset[0]) / groupScale;
-  const anchorY = height / 2 / groupScale + offset[1] / groupScale;
-  const anchorZ = offset[2] / groupScale;
+  const anchorX = anchorOverride ? anchorOverride[0] : ((ANCHOR_X_RATIO * width) / 2 + offset[0]) / groupScale;
+  const anchorY = anchorOverride ? anchorOverride[1] : (height / 2 / groupScale + offset[1] / groupScale);
+  const anchorZ = anchorOverride ? anchorOverride[2] : (offset[2] / groupScale);
   const localGravity = GRAVITY / groupScale;
 
-  useFrame((_state, delta) => {
+  useFrame((state, delta) => {
     const group = groupRef.current;
     if (!group) return;
     const links = rig.links;
     if (links.length === 0) return;
+
+    // A rig appearing for the first time is a mount; appearing after the links
+    // were already placed means useChainRig rebuilt and handed back brand new
+    // meshes whose positions are still the origin, while `initialised` is true
+    // and would skip the re-hang. That is a chain exploding out of a pile, so
+    // it is worth naming loudly rather than letting it look like a flash.
+    if (rigRef.current !== rig) {
+      const rebuiltAfterInit = initialised.current;
+      tracePointer(
+        rebuiltAfterInit ? "sim:RIG-REBUILT-AFTER-INIT" : "sim:rig-built-frame",
+        {
+          linkCount: links.length,
+          wasInitialised: rebuiltAfterInit,
+          firstLinkStartsAt: traceVector(links[0].position),
+        },
+      );
+      rigRef.current = rig;
+    }
 
     const dt = Math.min(delta, MAX_STEP);
 
@@ -726,6 +962,7 @@ function Chain({
     links[0].previous.copy(links[0].position);
 
     // Pick up the nearest link on press, and keep hold of it until release.
+    const previouslyGrabbed = pointer.grabbed;
     if (pointer.down && pointer.grabbed < 0) {
       let best = -1;
       let bestDistance = rig.outer * GRAB_RADIUS_RATIO;
@@ -739,6 +976,23 @@ function Chain({
       pointer.grabbed = best;
     }
     if (!pointer.down) pointer.grabbed = -1;
+    if (pointer.grabbed !== previouslyGrabbed) {
+      if (pointer.grabbed < 0) {
+        tracePointer("sim:grab-released", {
+          link: previouslyGrabbed,
+          throw: Number(lastThrowRef.current.toFixed(3)),
+          restLength: Number(localRest.toFixed(3)),
+        });
+      } else {
+        lastThrowRef.current = 0;
+        tracePointer("sim:grab-latched", {
+          link: pointer.grabbed,
+          pointerWorld: traceVector(scratchPointerWorld),
+          grabRadius: Number((rig.outer * GRAB_RADIUS_RATIO).toFixed(2)),
+          candidates: links.length,
+        });
+      }
+    }
 
     for (const [index, link] of links.entries()) {
       const held = pointer.grabbed === index;
@@ -767,6 +1021,7 @@ function Chain({
         const throwLength = scratchDelta.length();
         const maxThrow = localRest * THROW_LIMIT;
         if (throwLength > maxThrow) scratchDelta.multiplyScalar(maxThrow / throwLength);
+        lastThrowRef.current = scratchDelta.length();
         link.previous.copy(link.position).sub(scratchDelta);
         continue;
       }
@@ -837,6 +1092,9 @@ function Chain({
     const chordMin = 2 * localRest * Math.cos(MAX_BEND / 2);
     const separationMin = localRest * SELF_SEPARATION;
 
+    // A pinned tail solves kinematically like the pinned anchor: neighbours
+    // move around it, it never moves for them.
+    const tailPinned = !!tailPinWorld?.current && links.length > 1;
     for (let iteration = 0; iteration < CONSTRAINT_ITERATIONS; iteration += 1) {
       for (let i = 1; i < links.length; i += 1) {
         const a = links[i - 1];
@@ -850,6 +1108,8 @@ function Chain({
         const correction = ((distance - localRest) / distance) * strength;
         if (i === 1) {
           b.position.addScaledVector(scratchDelta, -correction);
+        } else if (tailPinned && i === links.length - 1) {
+          a.position.addScaledVector(scratchDelta, correction);
         } else {
           a.position.addScaledVector(scratchDelta, correction * 0.5);
           b.position.addScaledVector(scratchDelta, -correction * 0.5);
@@ -858,6 +1118,9 @@ function Chain({
 
       // Bend limit across every joint.
       for (let i = 1; i < links.length - 1; i += 1) {
+        // The pinned tail's joint is governed by the pin and the distance
+        // constraint above — bending it as well would fight both.
+        if (tailPinned && i + 1 === links.length - 1) continue;
         pushApart(links[i - 1], links[i + 1], chordMin, BEND_STRENGTH, i === 1);
       }
 
@@ -865,6 +1128,7 @@ function Chain({
       // ring being dragged through one it is not connected to.
       for (let i = 0; i < links.length; i += 1) {
         for (let j = i + 2; j < links.length; j += 1) {
+          if (tailPinned && j === links.length - 1) continue;
           pushApart(links[i], links[j], separationMin, 1, i === 0);
         }
       }
@@ -876,8 +1140,9 @@ function Chain({
     // rings passing through each other rather than just holding their spacing:
     // without it the centres can sit exactly right while the tubes intersect,
     // and the solver micro-jitters fighting itself.
-    for (let beadPass = 0; beadPass < BEAD_ITERATIONS; beadPass++) {
-      collideBeads(links, rig.ringRadius, rig.tubeRadius, anchorAngle);
+    const beadPasses = beadIterations ?? BEAD_ITERATIONS;
+    for (let beadPass = 0; beadPass < beadPasses; beadPass++) {
+      collideBeads(links, rig.ringRadius, rig.tubeRadius, anchorAngle, tailPinned);
     }
     // Friction from the spinning anchor into link 1, once per frame after the
     // separation has settled. This is what visibly couples the motor to the
@@ -889,12 +1154,85 @@ function Chain({
     // a violent flick cannot run a link out to infinity between frames.
     const maxDistance = localRest * MAX_STRETCH;
     for (let i = 1; i < links.length; i += 1) {
+      // The pinned tail is placed after the solve; clamping it here would
+      // fight the pin every frame.
+      if (tailPinned && i === links.length - 1) continue;
       const a = links[i - 1];
       const b = links[i];
       scratchDelta.copy(b.position).sub(a.position);
       const distance = scratchDelta.length();
       if (distance <= maxDistance || distance < 1e-9) continue;
       b.position.copy(a.position).addScaledVector(scratchDelta, maxDistance / distance);
+    }
+
+    // Room confine and the phone's no-go ball, before the tail pin so the
+    // pinned ends stay exempt: the anchor is restored by the solver, the tail
+    // is placed next.
+    if (confineWorld || avoidCapsule?.current) {
+      group.updateWorldMatrix(true, false);
+      const capsule = avoidCapsule?.current;
+      contactDepthRef.current = 0;
+      for (let i = 1; i < links.length - 1; i++) {
+        scratchPin.copy(links[i].position);
+        group.localToWorld(scratchPin);
+        if (confineWorld) {
+          scratchClamp.copy(scratchPin);
+          scratchClamp.x = Math.min(Math.max(scratchClamp.x, confineWorld.min.x), confineWorld.max.x);
+          scratchClamp.y = Math.min(Math.max(scratchClamp.y, confineWorld.min.y), confineWorld.max.y);
+          // No max-Z: the mouth stays open so the tether can run out front.
+          scratchClamp.z = Math.max(scratchClamp.z, confineWorld.min.z);
+          scratchPin.copy(scratchClamp);
+        }
+        if (capsule) {
+          // Closest point on the body segment, pushed out to its surface.
+          scratchDelta.copy(scratchPin).sub(capsule.bottom);
+          scratchSeg.copy(capsule.top).sub(capsule.bottom);
+          const segLenSq = Math.max(scratchSeg.lengthSq(), 1e-12);
+          const tSeg = Math.min(Math.max(scratchDelta.dot(scratchSeg) / segLenSq, 0), 1);
+          scratchClosest.copy(capsule.bottom).addScaledVector(scratchSeg, tSeg);
+          scratchDelta.copy(scratchPin).sub(scratchClosest);
+          const distance = scratchDelta.length();
+          if (distance < capsule.radius && distance > 1e-9) {
+            scratchPin.copy(scratchClosest).addScaledVector(scratchDelta, capsule.radius / distance);
+            // Deepest touch wins: its normal tells the body which way to roll.
+            const depth = capsule.radius - distance;
+            if (depth > contactDepthRef.current) {
+              contactDepthRef.current = depth;
+              contactNormalRef.current.copy(scratchDelta).divideScalar(distance);
+            }
+          }
+        }
+        group.worldToLocal(scratchPin);
+        links[i].position.copy(scratchPin);
+        // Dead-stop the corrected link: killing the inbound velocity is what
+        // stops it hammering the same wall every frame.
+        links[i].previous.copy(scratchPin);
+      }
+    }
+
+    // Tail pin, after everything: the last link hangs onto its moving object
+    // and the middle links take the yank. Travel-capped like a held link, so
+    // the pin can never teleport further than the solver can absorb — a hard
+    // yank tracks smoothly instead of exploding.
+    if (tailPinWorld?.current && links.length > 1) {
+      group.updateWorldMatrix(true, false);
+      scratchPin.copy(tailPinWorld.current);
+      group.worldToLocal(scratchPin);
+      if (tailPinLiveRef.current) {
+        scratchDelta.copy(scratchPin).sub(tailPinLocalRef.current);
+        const travel = scratchDelta.length();
+        const maxTravel = localRest * HELD_LIMIT;
+        if (travel > maxTravel) {
+          scratchPin.copy(tailPinLocalRef.current).addScaledVector(scratchDelta, maxTravel / travel);
+        }
+      }
+      tailPinLocalRef.current.copy(scratchPin);
+      tailPinLiveRef.current = true;
+      const tail = links[links.length - 1];
+      tail.position.copy(scratchPin);
+      tail.previous.copy(scratchPin);
+    } else {
+      tailPinLiveRef.current = false;
     }
 
     // Report how far the chain is pulled, as the tail's displacement from where
@@ -914,6 +1252,58 @@ function Chain({
     } else if (lastPullRef.current !== 0) {
       lastPullRef.current = 0;
       onPullRef.current?.(0);
+    }
+
+    // Flash detector. A ring whose projected diameter is wider than the viewport
+    // is exactly the condition the notes blame for the full-screen flash, so it
+    // is measured rather than assumed: a link of local radius outer/2 sits at
+    // distance d from the camera, where the viewport is 2*d*tan(fov/2) tall.
+    const camera = state.camera;
+    const tanHalfFov = Math.tan((((camera as THREE.PerspectiveCamera).fov ?? 50) * Math.PI) / 360);
+    const covering: number[] = [];
+    let worst = 0;
+    for (const [index, link] of links.entries()) {
+      const distance = Math.max(camera.position.z - link.position.z * groupScale, 1e-3);
+      const coverage = rig.outer * groupScale / (2 * tanHalfFov * distance);
+      if (coverage < 1) continue;
+      covering.push(index);
+      if (coverage > worst) worst = coverage;
+    }
+    const coveringKey = covering.join(",");
+    if (coveringKey !== coveringRef.current) {
+      coveringRef.current = coveringKey;
+      if (covering.length > 0) {
+        tracePointer("sim:RING-COVERS-VIEWPORT", {
+          links: covering,
+          coverage: Number(worst.toFixed(2)),
+          groupScale: Number(groupScale.toFixed(4)),
+          outer: Number(rig.outer.toFixed(2)),
+          viewportHeight: Number(height.toFixed(2)),
+          pressed: pointer.down,
+        });
+      }
+    }
+
+    // Per-frame dump of what the simulation is reading: 10Hz while held, 2Hz
+    // otherwise, so a flash that lands after the release is still captured
+    // without a drag becoming a wall of 60 lines a second.
+    traceClockRef.current += dt;
+    const traceInterval = pointer.down ? 0.1 : 0.5;
+    if (traceClockRef.current >= traceInterval) {
+      traceClockRef.current = 0;
+      const tail = links[links.length - 1];
+      tracePointer("sim:frame", {
+        down: pointer.down,
+        grabbed: pointer.grabbed,
+        anchor: `${anchorX.toFixed(2)}, ${anchorY.toFixed(2)}, ${anchorZ.toFixed(2)}`,
+        groupScale: Number(groupScale.toFixed(4)),
+        pointerWorld: traceVector(scratchPointerWorld),
+        frameDelta: `${pointer.deltaX.toFixed(3)}, ${pointer.deltaY.toFixed(3)}`,
+        links: links.map((link) => traceVector(link.position)),
+        tail: traceVector(tail.position),
+        pull: Number(lastPullRef.current.toFixed(3)),
+        dt: Number(dt.toFixed(4)),
+      });
     }
 
     // Last line of defence: any link that has gone non-finite is re-hung from
@@ -945,6 +1335,53 @@ function Chain({
       // what collides.
       linkOrientation(links, index, anchorAngle, link.mesh.quaternion);
     });
+
+    // Live measurements for anything tethered to this copy.
+    if (metricsRef) {
+      group.updateWorldMatrix(true, false);
+      metricsAnchorRef.current.set(anchorX, anchorY, anchorZ);
+      group.localToWorld(metricsAnchorRef.current);
+      const metrics =
+        metricsRef.current ??
+        (metricsRef.current = {
+          anchorWorld: new THREE.Vector3(),
+          reachWorld: 0,
+          tailWorld: new THREE.Vector3(),
+          knobWorld: new THREE.Vector3(),
+          contactNormal: new THREE.Vector3(0, 0, 1),
+          contactDepth: 0,
+        });
+      metrics.anchorWorld.copy(metricsAnchorRef.current);
+      metrics.reachWorld = rig.length * group.scale.x;
+      metrics.tailWorld.copy(links[links.length - 1].position);
+      group.localToWorld(metrics.tailWorld);
+      if (knobRef.current) {
+        knobRef.current.getWorldPosition(metrics.knobWorld);
+      }
+      metrics.contactNormal.copy(contactNormalRef.current);
+      metrics.contactDepth = contactDepthRef.current;
+    }
+
+    // Clasp roll: the yellow ball turns with where it goes — rolling without
+    // slipping, so its spin tracks its travel instead of spinning freely.
+    if (knobRef.current) {
+      knobRef.current.getWorldPosition(scratchPin);
+      if (knobInitRef.current) {
+        scratchDelta.copy(scratchPin).sub(knobPrevRef.current);
+        const travel = scratchDelta.length();
+        if (travel > 1e-6) {
+          knobRef.current.getWorldScale(scratchSeg);
+          const worldRadius = Math.max(rig.tubeRadius * 1.3 * scratchSeg.x, 1e-6);
+          scratchClosest.copy(AXIS_Y).cross(scratchDelta);
+          if (scratchClosest.lengthSq() > 1e-12) {
+            scratchClosest.normalize();
+            knobRef.current.rotateOnWorldAxis(scratchClosest, travel / worldRadius);
+          }
+        }
+      }
+      knobPrevRef.current.copy(scratchPin);
+      knobInitRef.current = true;
+    }
   });
 
   return (
@@ -997,20 +1434,50 @@ export interface ChainlinkBackgroundProps {
  * pinned by uniform now, so nothing here can tint the output: the environment
  * only has to get the *luminance* range right, and the pattern does the rest.
  */
-function StudioEnvironment() {
-  return (
-    <Environment resolution={256} frames={1}>
-      <color attach="background" args={["#0B0B0C"]} />
-      {/* Key overhead, the broad highlight along the top of each ring. */}
-      <Lightformer intensity={5} rotation-x={Math.PI / 2} position={[0, 5, -1]} scale={[12, 12, 1]} />
-      {/* Cooler, dimmer fill from below so the underside falls off. */}
-      <Lightformer intensity={1.1} rotation-x={-Math.PI / 2} position={[0, -5, 1]} scale={[12, 12, 1]} />
-      {/* Narrow side strip: a tight specular line that describes the curvature. */}
-      <Lightformer intensity={3} rotation-y={Math.PI / 2} position={[-6, 0, 2]} scale={[8, 3, 1]} />
-      <Lightformer intensity={1.6} rotation-y={-Math.PI / 2} position={[6, 1, -2]} scale={[8, 3, 1]} />
-    </Environment>
-  );
-}
+/**
+ * The environment's contents, hoisted to module scope and passed as a single
+ * child so its identity never changes.
+ *
+ * drei's `Environment` lists `children` in the dependency array of the layout
+ * effect that captures the cubemap and assigns `scene.environment`
+ * (Environment.js:134). Children built inline are a new reference on every
+ * render, so any re-render of this component re-ran that effect. A pointer press
+ * is exactly such a re-render: `setPressed` swaps the cursor and re-renders the
+ * whole Canvas subtree, which tore `scene.environment` back to null in the effect
+ * cleanup and then synchronously re-rendered all six cube faces before paint.
+ *
+ * The rings are metalness 0.85, so a metal with no environment has almost nothing
+ * to reflect and renders near-black — and the dither pass resolves a near-black
+ * frame into a full-screen field of the chain's own colours. That is the flash,
+ * and it needed no physics, no grab and no resize to produce it.
+ *
+ * One child expression, not several: React only passes a lone child through as
+ * `props.children` itself, wrapping two or more in a fresh array, which would
+ * defeat the whole thing.
+ */
+const STUDIO_ENVIRONMENT_CHILDREN = (
+  <>
+    <color attach="background" args={["#0B0B0C"]} />
+    {/* Key overhead, the broad highlight along the top of each ring. */}
+    <Lightformer intensity={5} rotation-x={Math.PI / 2} position={[0, 5, -1]} scale={[12, 12, 1]} />
+    {/* Cooler, dimmer fill from below so the underside falls off. */}
+    <Lightformer intensity={1.1} rotation-x={-Math.PI / 2} position={[0, -5, 1]} scale={[12, 12, 1]} />
+    {/* Narrow side strip: a tight specular line that describes the curvature. */}
+    <Lightformer intensity={3} rotation-y={Math.PI / 2} position={[-6, 0, 2]} scale={[8, 3, 1]} />
+    <Lightformer intensity={1.6} rotation-y={-Math.PI / 2} position={[6, 1, -2]} scale={[8, 3, 1]} />
+  </>
+);
+
+/** Counts renders of the environment, so the capture can be seen not re-running. */
+let studioRenderCount = 0;
+
+// memo as well as the hoisted children: memo stops this component re-rendering at
+// all, so the capture effect cannot be re-triggered by a future prop either.
+export const StudioEnvironment = memo(function StudioEnvironment() {
+  studioRenderCount += 1;
+  tracePointer("sim:studio-render", { count: studioRenderCount });
+  return <Environment resolution={256} frames={1}>{STUDIO_ENVIRONMENT_CHILDREN}</Environment>;
+});
 
 export function ChainlinkBackground({
   modelUrl = MODEL_URL,
@@ -1048,6 +1515,17 @@ export function ChainlinkBackground({
     const pointer = pointerRef.current;
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+    tracePointer(`dom:${event.type}`, {
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      isPrimary: event.isPrimary,
+      button: event.button,
+      buttons: event.buttons,
+      pressure: event.pressure,
+      client: `${event.clientX}, ${event.clientY}`,
+      ndc: `${pointer.x.toFixed(3)}, ${pointer.y.toFixed(3)}`,
+      rect: `${Math.round(rect.width)}x${Math.round(rect.height)}`,
+    });
   };
 
   return (
@@ -1060,23 +1538,43 @@ export function ChainlinkBackground({
         pointerRef.current.down = true;
         setPressed(true);
         event.currentTarget.setPointerCapture(event.pointerId);
+        tracePointer("dom:pointerdown-capture", {
+          pointerId: event.pointerId,
+          capture: "set",
+          down: true,
+          pressed: true,
+          cursor: GRAB_CURSOR,
+        });
       }}
       onPointerMove={track}
       onPointerUp={(event) => {
+        const pointerId = event.pointerId;
+        const held = pointerRef.current.grabbed;
         pointerRef.current.down = false;
         pointerRef.current.grabbed = -1;
         setPressed(false);
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        event.currentTarget.releasePointerCapture(pointerId);
+        tracePointer("dom:pointerup-release", {
+          pointerId,
+          heldLink: held,
+          capture: "released",
+          down: false,
+          pressed: false,
+          cursor: HOVER_CURSOR,
+        });
       }}
       onPointerCancel={() => {
         pointerRef.current.down = false;
         pointerRef.current.grabbed = -1;
         setPressed(false);
+        tracePointer("dom:pointercancel-release", { down: false, grabbed: -1 });
       }}
       onPointerLeave={() => {
+        const held = pointerRef.current.grabbed;
         pointerRef.current.down = false;
         pointerRef.current.grabbed = -1;
         setPressed(false);
+        tracePointer("dom:pointerleave-release", { heldLink: held, down: false, grabbed: -1 });
       }}
     >
       <Canvas
